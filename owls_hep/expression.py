@@ -11,33 +11,6 @@ import re
 _property_regex = re.compile('[A-Za-z_]\w*(?!\w*\s*\()')
 
 
-def normalized(expression):
-    """Converts the expression to the syntax necessary for Pandas'
-    DataFrame.eval method.
-
-    Args:
-        expression: The expression to normalize
-
-    Returns:
-        A normalized version of the expression usable in Pandas' DataFrame.eval
-        method.
-    """
-    return expression.replace('!', '~').replace('&&', '&').replace('||', '|')
-
-
-def properties(expression):
-    """Creates a list of properties needed to evaluate the expression.
-
-    Args:
-        expression: The expression string
-
-    Returns:
-        A set of properties necessary to evaluate the expression.
-    """
-    # Generate a set of matches from the property regex
-    return set((m.group(0) for m in _property_regex.finditer(expression)))
-
-
 def negated(expression):
     """Returns a negated version of the expression.
 
@@ -88,11 +61,13 @@ def _combined(expressions, operator):
     Returns:
         The combined expression string.
     """
-    return '({0})'.format(
-        ' {0} '.format(operator).join((
-            '({0})'.format(e) for e in expressions
-        ))
-    )
+    wrap_expr = ['({0})'.format(e) for e in expressions if e]
+    if len(wrap_expr) > 1:
+        return '({0})'.format(' {0} '.format(operator).join(wrap_expr))
+    elif len(wrap_expr) == 1:
+        return wrap_expr[0]
+    else:
+        return ''
 
 
 def added(*expressions):

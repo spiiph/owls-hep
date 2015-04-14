@@ -8,7 +8,7 @@ import re
 from copy import copy
 
 # owls-data imports
-from owls_hep.expression import normalized, multiplied
+from owls_hep.expression import multiplied
 
 
 # Set up default exports
@@ -76,7 +76,7 @@ class Reweighted(Variation):
             weight: The weight expression to incorporate into the region
         """
         # Store the weight
-        self._weight = normalized(weight)
+        self._weight = weight
 
     def state(self):
         """Returns a representation of the variation's internal state.
@@ -152,6 +152,9 @@ class Region(object):
         """
         return self._metadata
 
+    # NOTE: I'm not sure I like this late execution of the variations. I'd
+    # much rather apply the variations directly. But perhaps there's some
+    # deeper meaning here.
     def varied(self, variation):
         """Creates a copy of the region with the specified variation applied.
 
@@ -195,7 +198,8 @@ class Region(object):
         return result
 
     def selection_weight(self):
-        """Returns a tuple of (selection, weight) with all variations applied.
+        """Returns a string of "selection * weight" with all variations
+        applied.
         """
         # Grab resultant weight/selection
         selection, weight = self._selection, self._weight
@@ -204,9 +208,13 @@ class Region(object):
         for v in self._variations:
             selection, weight = v(selection, weight)
 
-        # If this region isn't weighted, return an empty weight
-        if not self._weighted:
-            return (selection, '')
-
-        # All done
-        return (selection, weight)
+        # If this region isn't weighted, return only the selection
+        if selection:
+            if self._weighted and weight:
+                return multiplied(selection, weight)
+            else:
+                return selection
+        elif self._weighted and weight:
+            return weight
+        else:
+            return ""

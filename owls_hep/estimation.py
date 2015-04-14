@@ -155,3 +155,15 @@ class Estimation(HigherOrderCalculation):
 
         # All done
         return result
+
+class Plain(Estimation):
+    """A plain estimation with a scale factor of 1.0.
+
+    This is the simplest possible estimation. Useful to produce bare plots of
+    distributions for individual processes and regions.
+    """
+    def components(self, process, region):
+        return [
+            (1.0, False, process, region)
+        ]
+

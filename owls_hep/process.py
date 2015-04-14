@@ -6,130 +6,50 @@
 import warnings
 from inspect import getsource
 from copy import copy
+from os.path import isfile
 
 # Six imports
 from six import string_types
 
-# Pandas imports
-from pandas import DataFrame
-
 # ROOT imports
-from ROOT import TColor
-
-# root_numpy imports
-from root_numpy import root2array, RootNumpyUnconvertibleWarning
+from ROOT import TChain, TColor
 
 # owls-hep imports
-from owls_hep.expression import normalized, properties
+from owls_hep.expression import multiplied
+from owls_hep.output import print_warning
 
 
 # Set up default exports
 __all__ = [
     'Patch',
-    'Filter',
     'Process',
 ]
 
-
-# Ignore root_numpy unconvertible warnings
-warnings.simplefilter('ignore', RootNumpyUnconvertibleWarning)
-
-
 class Patch(object):
-    """Represents a patch to apply to a process' data.
-    """
-
-    def __hash__(self):
-        """Returns a unique hash for the patch.
-
-        This method should not be overridden.
-        """
-        # HACK: Use the implementation of the patch in the hash, because the
-        # behavior of the patch is what should determine hash equality, and
-        # it's impossible to determine solely on type if the implementation
-        # changes.
-        return hash((self.state(), getsource(self.__call__)))
-
-    def state(self):
-        """Returns a representation of the patch's internal state, if any.
-
-        This method is used to generate a unique hash for the patch for the
-        purposes of caching.  If a patch has no internal state, and it's
-        behavior is determined entirely by its type, then the implementer need
-        not override this method.  However, if a patch contains state which
-        affects its patching behavior, this method needs to be overridden.  A
-        simple tuple may be returned containing the state of the patch.
-
-        Returns:
-            A hashable object representing the internal state of the patch.
-        """
-        return ()
-
-    def properties(self):
-        """Returns a Python set of properties of the data required to evaluate
-        the patch.
-
-        Implementers must override this method if they require any properties
-        to be loaded, as the default implementation returns an empty set.
-
-        Returns:
-            A Python set containing strings of the required patch properties.
-        """
-        return set()
-
-    def __call__(self, data):
-        """Applies the patch to a DataFrame.
-
-        The provided DataFrame may be mutated in-place, as it will not be
-        re-used.  In any event, the patched DataFrame should be returned.
-
-        Implementers must override this method.
-
-        Args:
-            data: The DataFrame to patch
-
-        Returns:
-            The patched DataFrame.
-        """
-        raise NotImplementedError('abstract method')
-
-
-class Filter(Patch):
-    """A reusable process patch that filters events according to an expression.
+    """A reusable process patch weighs/filters events according to an
+    expression.
     """
 
     def __init__(self, selection):
-        """Initializes a new instance of the Filter class.
+        """Initializes a new instance of the Patch class.
 
         Args:
             selection: The selection expression to apply to the process data
         """
-        self._selection = normalized(selection)
+        self._selection = selection
 
     def state(self):
         """Returns a representation of the patch's internal state, if any.
         """
         return (self._selection,)
 
-    def properties(self):
-        """Returns a Python set of properties of the data required to evaluate
-        the patch.
+    def selection(self):
+        """Returns the selection string for the patch.
 
         Returns:
-            A Python set containing strings of the required patch properties.
+            The selection string.
         """
-        return properties(self._selection)
-
-    def __call__(self, data):
-        """Applies the selection to a DataFrame.
-
-        Args:
-            data: The DataFrame to patch
-
-        Returns:
-            The filtered DataFrame.
-        """
-        return data.query(self._selection)
+        return self._selection
 
 
 class Process(object):
@@ -191,51 +111,32 @@ class Process(object):
         """
         return self._metadata
 
-    def load(self, properties, start = None, stop = None, step = None):
+    def patches(self):
+        """Returns an expression of patches for the process, if any.
+        """
+        return multiplied(*self._patches)
+
+    # NOTE: We could instead return a list of TTrees/TFiles, because using
+    # individual TFile/TTree objects might be slightly faster than creating
+    # one huge TChain.
+    def load(self):
         """Loads the given properties of the process data.
 
         The tree weights of the TTrees are included in the resultant DataFrame
         as the 'tree_weight' property.
 
-        Args:
-            properties: A Python set of property names (TTree branch names) to
-                load.  'tree_weight' may be included, just for convenience, it
-                will not be treated as a branch name.
-            start, stop, step: These parameters correspond to slicing
-                parameters - i.e. [start:stop:step].  Any subset or all of them
-                may be None, which corresponds to omitting the corresponding
-                slicing parameter.
-
         Returns:
-            A Pandas DataFrame containing the specified properties for the
-            process.
+            A TChain for the process.
         """
-        # Compute the properties we need to load
-        all_properties = set.union(properties,
-                                   *(p.properties() for p in self._patches))
 
-        # Remove tree weight branch if present, it will be added implicitly
-        if 'tree_weight' in all_properties:
-            all_properties.remove('tree_weight')
-
-        # Load the data
-        result = DataFrame(root2array(
-            filenames = self._files,
-            treename = self._tree,
-            branches = list(all_properties),
-            start = start,
-            stop = stop,
-            step = step,
-            include_weight = True,
-            weight_name = 'tree_weight'
-        ))
-
-        # Apply patches
-        for p in self._patches:
-            result = p(result)
+        chain = TChain(self._tree)
+        for f in self._files:
+            if not isfile(f):
+                raise RuntimeError('filed does not exist {0}'.format(f))
+            chain.Add(f)
 
         # All done
-        return result
+        return chain
 
     def retreed(self, tree):
         """Creates a new copy of the process with a different tree.

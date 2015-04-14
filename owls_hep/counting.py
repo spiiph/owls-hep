@@ -1,6 +1,11 @@
 """Provides method for efficiently counting events in a region.
 """
 
+# System imports
+from uuid import uuid4
+
+# ROOT imports
+from ROOT import gDirectory
 
 # owls-cache imports
 from owls_cache.persistent import cached as persistently_cached
@@ -9,12 +14,12 @@ from owls_cache.persistent import cached as persistently_cached
 from owls_parallel import parallelized
 
 # owls-hep imports
-from owls_hep.expression import properties, normalized
 from owls_hep.calculation import Calculation
+from owls_hep.expression import multiplied
 
 
 @parallelized(lambda p, r: 1.0, lambda p, r: (p, r))
-@persistently_cached('owls_hep.counting.count', lambda p, r: (p, r))
+@persistently_cached('owls_hep.counting._count', lambda p, r: (p, r))
 def _count(process, region):
     """Computes the weighted event count of a process in a region.
 
@@ -25,27 +30,28 @@ def _count(process, region):
     Returns:
         The weighted event count in the region.
     """
-    # Compute weighted selection
-    selection, weight = region.selection_weight()
+    # Get the combined selection and weight from the region
+    region_selection = region.selection_weight()
 
-    # Compute the weighted selection properties
-    required_properties = set()
-    required_properties.update(properties(selection))
-    required_properties.update(properties(weight))
+    # Get patches
+    patches = process.patches()
 
-    # Load data
-    data = process.load(required_properties)
-
-    # Apply selection if specified
-    if selection != '':
-        data = data[data.eval(normalized(selection))]
-
-    # Compute the weighted or unweighted count
-    if weight != '':
-        return data.eval(normalized(weight)).sum()
+    if not patches:
+        selection = region_selection
     else:
-        return len(data)
+        selection = multiplied(region_selection, patches)
 
+    # Create a unique name and title for the histogram
+    name = title = uuid4().hex
+
+    # Create the expression string and specify which histogram to fill
+    expression = '1>>{0}'.format(name)
+
+    # Load the chain
+    chain = process.load()
+    chain.Draw(expression, selection)
+    h = gDirectory.Get(name)
+    return h.Integral(-1, h.GetNbinsX()+1)
 
 class Count(Calculation):
     """A counting calculation.
