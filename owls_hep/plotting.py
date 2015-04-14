@@ -162,7 +162,12 @@ def maximum_value(drawables):
             maximum = drawable.GetMaximum()
         elif is_graph(drawable):
             # http://root.cern.ch/phpBB3/viewtopic.php?t=9070
-            maximum = TMath.MaxElement(drawable.GetN(), drawable.GetY())
+            try:
+                maximum = TMath.MaxElement(drawable.GetN(), drawable.GetY())
+            except TypeError:
+                # Could not convert argument 2, probably due to no points in
+                # the graph. (GetN() == 0) Set a maximum of 1.0.
+                maximum = 1.0
         elif is_line(drawable):
             maximum = max(drawable.GetY1(), drawable.GetY2())
         else:
@@ -186,6 +191,8 @@ def maximum_value(drawables):
             for i in xrange(error_band.GetN()):
                 maximum_error = max(maximum_error, error_band.GetErrorYhigh(i))
             maximum += maximum_error
+        elif maximum < 5:
+            maximum *= 1.2
         else:
             maximum += sqrt(maximum)
 
@@ -298,9 +305,9 @@ class Plot(object):
     PLOT_LEGEND_BOTTOM_WITH_RATIO = 0.63
     PLOT_LEGEND_TOP = 0.88
     PLOT_LEGEND_TOP_WITH_RATIO = 0.88
-    PLOT_LEGEND_TEXT_SIZE = 0.03
-    PLOT_LEGEND_TEXT_SIZE_WITH_RATIO = 0.045
-    PLOT_LEGEND_N_COLUMNS = 2
+    PLOT_LEGEND_TEXT_SIZE = 0.02
+    PLOT_LEGEND_TEXT_SIZE_WITH_RATIO = 0.03
+    PLOT_LEGEND_N_COLUMNS = 1
     PLOT_RATIO_FRACTION = 0.3 # fraction of canvas height
     PLOT_X_AXIS_TITLE_SIZE = 0.045
     PLOT_X_AXIS_TITLE_SIZE_WITH_RATIO = 0.13
@@ -547,6 +554,10 @@ class Plot(object):
             # drawable, not just the one with the axes.
             if not is_line(drawable):
                 drawable.SetMaximum(self._get_maximum_value())
+                # With TGraph, this is sometimes necessary. Perhaps with TH1
+                # too. I'm not sure what happens if we set log scale, but
+                # we'll cross that bridge then.
+                drawable.SetMinimum(0)
 
             # Include axes if we need
             if first:
@@ -751,8 +762,8 @@ class Plot(object):
             histogram.Draw('e0psame')
 
     def draw_atlas_label(self,
-                         luminosity,
-                         sqrt_s,
+                         luminosity = None,
+                         sqrt_s = None,
                          ks_test = None,
                          custom_label = None,
                          atlas_label = None):
@@ -780,35 +791,40 @@ class Plot(object):
         stamp.SetNDC()
 
         # Draw the luminosity
-        stamp.SetTextSize((self.PLOT_ATLAS_STAMP_LUMINOSITY_SIZE_WITH_RATIO
-                           if self._ratio_plot
-                           else self.PLOT_ATLAS_STAMP_LUMINOSITY_SIZE))
-        text = '#int L dt = {0:.1f} fb^{{-1}}'.format(luminosity / 1000.0)
-        stamp.DrawLatex(
-            self.PLOT_ATLAS_STAMP_LUMINOSITY_LEFT,
-            (self.PLOT_ATLAS_STAMP_LUMINOSITY_TOP_WITH_RATIO
-             if self._ratio_plot
-             else self.PLOT_ATLAS_STAMP_LUMINOSITY_TOP),
-            text
-        )
+        if luminosity is not None:
+            stamp.SetTextSize((self.PLOT_ATLAS_STAMP_LUMINOSITY_SIZE_WITH_RATIO
+                               if self._ratio_plot
+                               else self.PLOT_ATLAS_STAMP_LUMINOSITY_SIZE))
+            text = '#int L dt = {0:.1f} fb^{{-1}}'.format(luminosity / 1000.0)
+            stamp.DrawLatex(
+                self.PLOT_ATLAS_STAMP_LUMINOSITY_LEFT,
+                (self.PLOT_ATLAS_STAMP_LUMINOSITY_TOP_WITH_RATIO
+                 if self._ratio_plot
+                 else self.PLOT_ATLAS_STAMP_LUMINOSITY_TOP),
+                text
+            )
 
-        # Draw the center of mass energy and the result of the KS-test, if
-        # requested
-        text = '#sqrt{{s}} = {0:.1f} TeV'.format(sqrt_s / 1000000.0)
-        if ks_test is not None:
-            text += ', KS = {0:.2f}'.format(ks_test)
-        stamp.DrawLatex(
-            self.PLOT_ATLAS_STAMP_LEFT,
-            (self.PLOT_ATLAS_STAMP_SQRT_S_TOP_WITH_RATIO
-             if self._ratio_plot
-             else self.PLOT_ATLAS_STAMP_SQRT_S_TOP),
-            text
-        )
+        if sqrt_s is not None:
+            # Draw the center of mass energy and the result of the KS-test, if
+            # requested
+            text = '#sqrt{{s}} = {0:.1f} TeV'.format(sqrt_s / 1000000.0)
+            if ks_test is not None:
+                text += ', KS = {0:.2f}'.format(ks_test)
+            stamp.DrawLatex(
+                self.PLOT_ATLAS_STAMP_LEFT,
+                (self.PLOT_ATLAS_STAMP_SQRT_S_TOP_WITH_RATIO
+                 if self._ratio_plot
+                 else self.PLOT_ATLAS_STAMP_SQRT_S_TOP),
+                text
+            )
 
         # If requested, draw the custom label or the 'ATLAS' label,
         # preferring the former
         if custom_label is not None:
             # Draw the label
+            stamp.SetTextSize((self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
+                               if self._ratio_plot
+                               else self.PLOT_ATLAS_STAMP_TITLE_SIZE))
             stamp.DrawLatex(
                 self.PLOT_ATLAS_STAMP_LEFT,
                 (self.PLOT_ATLAS_STAMP_ATLAS_TOP_WITH_RATIO
