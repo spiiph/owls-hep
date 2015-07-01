@@ -208,3 +208,23 @@ class Histogram(Calculation):
 
         # All done
         return result
+
+
+def integral(hist, include_overflow = True):
+    """A helper function to compute the integral for THN histograms of
+    dimensionality D <= 3.
+    """
+    offset = 1 if include_overflow else 0
+    if hist.GetDimension() == 1:
+        return hist.Integral(1-offset, hist.GetNbinsX()+offset)
+    elif hist.GetDimension() == 2:
+        return hist.Integral(1-offset, hist.GetNbinsX()+offset,
+                             1-offset, hist.GetNbinsY()+offset)
+    elif hist.GetDimension() == 3:
+        return hist.Integral(1-offset, hist.GetNbinsX()+offset,
+                             1-offset, hist.GetNbinsY()+offset,
+                             1-offset, hist.GetNbinsZ()+offset)
+    else:
+        raise ValueError('don''t know how to compute the integral for '
+                         'more than 3 dimensions')
+
