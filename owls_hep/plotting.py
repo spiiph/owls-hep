@@ -37,8 +37,14 @@ from six.moves import range
 # inconsistent and terrible that we have to stop Python from even touching ROOT
 # graphical objects or ROOT will crash, often due to a double free or some
 # other nonsense.
-from ROOT import TCanvas, TPad, TH1, THStack, TGraph, TMath, TLegend, TLine, \
-    TLatex, SetOwnership
+from ROOT import TCanvas, TPad, TH1, TH2, THStack, TGraph, TMath, TLegend, \
+        TLine, TLatex, TPaveText, SetOwnership, gStyle
+
+# Use Dark radiator color map for 2D COLZ plots
+gStyle.SetPalette(53)
+
+# Turn off stat box by default
+gStyle.SetOptStat(0)
 
 
 # Convenience function for generating random IDs
@@ -49,6 +55,10 @@ def _rand_uuid():
 # Convenience function to check if an object is a TH1
 def is_histo(h):
     return isinstance(h, TH1)
+
+# Convenience function to check if an object is a TH2
+def is_scatter(h):
+    return isinstance(h, TH2)
 
 
 # Convenience function to check if an object is a THStack
@@ -158,7 +168,7 @@ def maximum_value(drawables):
             error_band = None
 
         # Compute the maximum for this drawable
-        if is_histo(drawable) or is_stack(drawable):
+        if is_histo(drawable) or is_stack(drawable) or is_scatter(drawable):
             maximum = drawable.GetMaximum()
         elif is_graph(drawable):
             # http://root.cern.ch/phpBB3/viewtopic.php?t=9070
@@ -504,6 +514,7 @@ class Plot(object):
                 form (object, options), where object is one of the following:
 
                 - A TH1 object
+                - A TH2 object
                 - A THStack object
                 - A tuple of the form (THStack, TGraph) where the latter
                   represents error bars
@@ -859,6 +870,43 @@ class Plot(object):
                  else self.PLOT_ATLAS_STAMP_ATLAS_TOP),
                 'ATLAS'
             )
+
+    def draw_pave(self, texts, position):
+        """Draw a text box at the position and fill it with text.
+
+        Args:
+            texts: String or N-tuple of strings.
+            positon: Absolute position of the form (x1, x2, y1, y2) as an
+                     N-tuple of floats, or a string with one of the values
+                     "{top,bottom}{left,right}"
+        """
+        if isinstance(position, basestring):
+            if position == 'topleft':
+                position = (0.15, 0.35, 0.85, 0.75)
+            elif position == 'topright':
+                position = (0.95, 0.75, 0.95, 0.85)
+            elif position == 'bottomleft':
+                position = (0.05, 0.25, 0.05, 0.15)
+            elif position == 'topright':
+                position = (0.95, 0.75, 0.05, 0.15)
+
+        # Switch to the context of the main plot
+        self._plot.cd()
+
+        # Create the pave
+        self._pave = TPaveText(position[0], position[2],
+                               position[1], position[3], 'NDC')
+        SetOwnership(self._pave, False)
+
+        # Add the text
+        if isinstance(texts, basestring):
+            self._pave.AddText(texts)
+        else:
+            for t in texts:
+                self._pave.AddText(t)
+
+        # Draw the pave
+        self._pave.Draw()
 
     def draw_legend(self, *drawables):
         """Draws a legend onto the plot with the specified histograms.
