@@ -2,6 +2,7 @@
 region.
 """
 
+from __future__ import print_function
 
 # System imports
 from uuid import uuid4
@@ -87,6 +88,22 @@ def _parallel_batcher(function, args_kwargs):
         # Call the functions
         function(*args, **kwargs)
 
+def _make_selection(process, region):
+    # Get the combined selection and weight from the region
+    region_selection = region.selection_weight()
+
+    # Get patches
+    patches = process.patches()
+
+    # Construct the final selection from the region selection and weight and
+    # the processes patches.
+    if not patches:
+        selection = region_selection
+    else:
+        selection = multiplied(region_selection, patches)
+    return selection
+
+
 @parallelized(_parallel_mocker, _parallel_mapper, _parallel_batcher)
 @persistently_cached('owls_hep.histogramming._histogram')
 def _histogram(process, region, expressions, binnings):
@@ -102,19 +119,11 @@ def _histogram(process, region, expressions, binnings):
     Returns:
         A ROOT histogram, of the TH1F, TH2F, or TH3F variety.
     """
-    # Get the combined selection and weight from the region
-    region_selection = region.selection_weight()
-
-    # Get patches
-    patches = process.patches()
-
-    if not patches:
-        selection = region_selection
-    else:
-        selection = multiplied(region_selection, patches)
-
     # Create a unique name and title for the histogram
     name = title = uuid4().hex
+
+    # Create the selection
+    selection = _make_selection(process, region)
 
     # Create the expression string and specify which histogram to fill
     expression = ' : '.join(expressions) + '>>{0}'.format(name)
@@ -195,6 +204,9 @@ class Histogram(Calculation):
         Returns:
             A ROOT histogram representing the resultant distribution.
         """
+        # Print some debug info
+        #print('Selection: {0}'.format(_make_selection(process, region)))
+        #print('Expressions: {0}'.format(':'.join(self._expressions)))
         # Compute the histogram
         result = _histogram(process, region, self._expressions, self._binnings)
 
