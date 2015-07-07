@@ -308,8 +308,10 @@ class Plot(object):
     PLOT_RATIO_MARGINS = (0.125, 0.05, 0.325, 0.05)
     PLOT_LEFT_MARGIN = 0.1
     PLOT_HEADER_HEIGHT = 400 # px
+    # TODO: Legend size and position should be overrideable
     PLOT_LEGEND_HEIGHT = 250 # px
-    PLOT_LEGEND_LEFT = 0.45
+    #PLOT_LEGEND_LEFT = 0.45
+    PLOT_LEGEND_LEFT = 0.3
     PLOT_LEGEND_RIGHT = 0.95
     PLOT_LEGEND_BOTTOM = 0.7
     PLOT_LEGEND_BOTTOM_WITH_RATIO = 0.63
