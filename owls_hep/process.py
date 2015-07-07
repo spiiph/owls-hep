@@ -120,10 +120,7 @@ class Process(object):
     # individual TFile/TTree objects might be slightly faster than creating
     # one huge TChain.
     def load(self):
-        """Loads the given properties of the process data.
-
-        The tree weights of the TTrees are included in the resultant DataFrame
-        as the 'tree_weight' property.
+        """Loads the process data.
 
         Returns:
             A TChain for the process.
@@ -132,7 +129,7 @@ class Process(object):
         chain = TChain(self._tree)
         for f in self._files:
             if not isfile(f):
-                raise RuntimeError('filed does not exist {0}'.format(f))
+                raise RuntimeError('file does not exist {0}'.format(f))
             chain.Add(f)
 
         # All done
