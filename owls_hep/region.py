@@ -1,6 +1,8 @@
 """Provides models for regions and region variations.
 """
 
+# Future imports
+from __future__ import print_function
 
 # System imports
 from inspect import getsource
@@ -32,6 +34,14 @@ class Variation(object):
         # the behavior of the variation is what should determine hash equality,
         # and it's impossible to determine solely on type if the implementation
         # changes.
+        if not isinstance(self.state(), tuple):
+            raise TypeError('Variation state is not a tuple ({0})'. \
+                    format(self.__class__))
+
+        if None in self.state():
+            print('Warning: Variation {0} has \'None\' in state!'.\
+                    format(self, self.state()))
+
         return hash((self.state(), getsource(self.__call__)))
 
     def state(self):
