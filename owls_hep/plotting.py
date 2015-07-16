@@ -303,15 +303,14 @@ class Plot(object):
     # probably best to leave them alone.
     PLOT_WIDTH = 1280 # px
     PLOT_HEIGHT = 1024 # px
-    PLOT_MARGINS = (0.125, 0.05, 0.1, 0.1) # Left, Right, Bottom, Top
+    #PLOT_MARGINS = (0.125, 0.05, 0.1, 0.1) # Left, Right, Bottom, Top
+    PLOT_MARGINS = (0.125, 0.1, 0.1, 0.1) # Left, Right, Bottom, Top
     PLOT_MARGINS_WITH_RATIO = (0.125, 0.05, 0.025, 0.1)
     PLOT_RATIO_MARGINS = (0.125, 0.05, 0.325, 0.05)
     PLOT_LEFT_MARGIN = 0.1
     PLOT_HEADER_HEIGHT = 400 # px
-    # TODO: Legend size and position should be overrideable
     PLOT_LEGEND_HEIGHT = 250 # px
-    #PLOT_LEGEND_LEFT = 0.45
-    PLOT_LEGEND_LEFT = 0.3
+    PLOT_LEGEND_LEFT = 0.45
     PLOT_LEGEND_RIGHT = 0.95
     PLOT_LEGEND_BOTTOM = 0.7
     PLOT_LEGEND_BOTTOM_WITH_RATIO = 0.63
@@ -323,12 +322,14 @@ class Plot(object):
     PLOT_RATIO_FRACTION = 0.3 # fraction of canvas height
     PLOT_X_AXIS_TITLE_SIZE = 0.045
     PLOT_X_AXIS_TITLE_SIZE_WITH_RATIO = 0.13
-    PLOT_X_AXIS_TITLE_OFFSET = 0.95
+    PLOT_X_AXIS_TITLE_OFFSET = 1.3
+    #PLOT_X_AXIS_TITLE_OFFSET = 0.95
     PLOT_X_AXIS_TITLE_OFFSET_WITH_RATIO = 0.96
     PLOT_X_AXIS_LABEL_SIZE_WITH_RATIO = 0.12
     PLOT_Y_AXIS_TITLE_SIZE = PLOT_X_AXIS_TITLE_SIZE
     PLOT_Y_AXIS_TITLE_SIZE_WITH_RATIO = 0.06
-    PLOT_Y_AXIS_TITLE_OFFSET = 1.0
+    PLOT_Y_AXIS_TITLE_OFFSET = 1.5
+    #PLOT_Y_AXIS_TITLE_OFFSET = 1.0
     PLOT_Y_AXIS_TITLE_OFSET_WITH_RATIO = 0.95
     PLOT_Y_AXIS_LABEL_SIZE_WITH_RATIO = 0.05
     PLOT_RATIO_Y_AXIS_TITLE_SIZE = 0.09
@@ -538,6 +539,10 @@ class Plot(object):
             raise RuntimeError('cannot draw twice to a plot')
         self._drawn = True
 
+        # Remove None-valued drawables
+        drawables_options = tuple(((drawable,option) for drawable,option \
+                in drawables_options if drawable is not None))
+
         # Extract drawables
         drawables, _ = zip(*drawables_options)
 
@@ -595,7 +600,7 @@ class Plot(object):
 
         # HACK: Need to force a redraw of plot axes due to issue with ROOT:
         # http://root.cern.ch/phpBB3/viewtopic.php?f=3&t=14034
-        self._plot.RedrawAxis()
+        #self._plot.RedrawAxis()
 
     def _handle_axes(self, drawable, option):
         """If there is no object currently registered as the owner of the axes
@@ -808,7 +813,11 @@ class Plot(object):
             stamp.SetTextSize((self.PLOT_ATLAS_STAMP_LUMINOSITY_SIZE_WITH_RATIO
                                if self._ratio_plot
                                else self.PLOT_ATLAS_STAMP_LUMINOSITY_SIZE))
-            text = '#int L dt = {0:.1f} fb^{{-1}}'.format(luminosity / 1000.0)
+            if luminosity > 1000.0:
+                text = '#int L dt = {0:.1f} fb^{{-1}}'.\
+                        format(luminosity / 1000.0)
+            else:
+                text = '#int L dt = {0:.1f} pb^{{-1}}'.format(luminosity)
             stamp.DrawLatex(
                 self.PLOT_ATLAS_STAMP_LUMINOSITY_LEFT,
                 (self.PLOT_ATLAS_STAMP_LUMINOSITY_TOP_WITH_RATIO
@@ -922,6 +931,10 @@ class Plot(object):
         # Check if we already have a legend
         if hasattr(self, '_legend'):
             raise RuntimeError('legend already exists on this plot')
+
+        # Remove None-valued drawables
+        drawables = tuple((drawable for drawable \
+                in drawables if drawable is not None))
 
         # Switch to the context of the main plot
         self._plot.cd()
