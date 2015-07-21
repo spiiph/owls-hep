@@ -74,12 +74,13 @@ def _parallel_mocker(process, region, expressions, binnings):
     dimensionality = len(binnings)
     return _create_histogram(dimensionality, name, binnings)
 
-# Histogram parallelization mapper.  We map/group based on process to maximize
-# data loading caching.
-# NOTE: Changed parallelizatoin to map on expressions instead.
+# Histogram parallelization mapper.  We map/group based on process and region
+# to maximize CPU load and data cacheing.
 def _parallel_mapper(process, region, expressions, binnings):
-    return (process,)
+    #return (process,)
     #return (expressions,)
+    return (process,region)
+    #return (process,region,expressions)
 
 # Histogram parallelization batcher
 def _parallel_batcher(function, args_kwargs):
