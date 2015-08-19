@@ -4,9 +4,6 @@
 # System imports
 from uuid import uuid4
 
-# ROOT imports
-from ROOT import gDirectory
-
 # owls-cache imports
 from owls_cache.persistent import cached as persistently_cached
 
@@ -15,8 +12,7 @@ from owls_parallel import parallelized
 
 # owls-hep imports
 from owls_hep.calculation import Calculation
-from owls_hep.expression import multiplied
-
+from owls_hep.utility import make_selection, integral
 
 @parallelized(lambda p, r: 1.0, lambda p, r: (p, r))
 @persistently_cached('owls_hep.counting._count', lambda p, r: (p, r))
@@ -30,28 +26,26 @@ def _count(process, region):
     Returns:
         The weighted event count in the region.
     """
-    # Get the combined selection and weight from the region
-    region_selection = region.selection_weight()
+    # Create a unique name for the histogram
+    name = uuid4().hex
 
-    # Get patches
-    patches = process.patches()
-
-    if not patches:
-        selection = region_selection
-    else:
-        selection = multiplied(region_selection, patches)
-
-    # Create a unique name and title for the histogram
-    name = title = uuid4().hex
+    # Create the selection
+    selection = make_selection(process, region)
 
     # Create the expression string and specify which histogram to fill
-    expression = '1>>{0}'.format(name)
+    expression = ' : '.join(expressions) + '>>{0}'.format(name)
+
+    # Create the bare histogram
+    dimensionality = len(expressions)
+    h = _create_histogram(dimensionality, name, binnings)
 
     # Load the chain
     chain = process.load()
     chain.Draw(expression, selection)
-    h = gDirectory.Get(name)
-    return h.Integral(-1, h.GetNbinsX()+1)
+
+    # Return the count as the integral of the histogram, including overflow
+    # bins
+    return integral(h, include_overflow=True)
 
 class Count(Calculation):
     """A counting calculation.

@@ -31,6 +31,7 @@ from itertools import chain
 
 # Six imports
 from six.moves import range
+from six import string_types
 
 # ROOT imports
 # HACK: We import and use SetOwnership because ROOT's memory management is so
@@ -38,7 +39,7 @@ from six.moves import range
 # graphical objects or ROOT will crash, often due to a double free or some
 # other nonsense.
 from ROOT import TCanvas, TPad, TH1, TH2, THStack, TGraph, TMath, TLegend, \
-        TLine, TLatex, TPaveText, SetOwnership, gStyle
+        TLine, TLatex, TPaveText, TColor, SetOwnership, gStyle
 
 # Use Dark radiator color map for 2D COLZ plots
 gStyle.SetPalette(53)
@@ -455,6 +456,9 @@ class Plot(object):
         # which need to be added to any legends created
         self._legend_extras = []
 
+        # Create a list of the cloned drawables, just to be certain
+        self._drawables = []
+
     def save(self, path):
         """Saves this plot to file.
 
@@ -507,7 +511,7 @@ class Plot(object):
         """Set log scale on the Y axis for this plot."""
         self._plot.SetLogy(int(log_scale))
 
-    def draw(self, *drawables_options):
+    def draw(self, *drawables_styles_options):
         """Plots a collection of plottables to the main plot pad.  All TH1
         objects are drawn with error bars.  THStack elements are only drawn
         with an error band if one is provided.
@@ -515,8 +519,9 @@ class Plot(object):
         This method may only be called once
 
         Args:
-            drawables_options: Each argument of this function must be of the
-                form (object, options), where object is one of the following:
+            drawables_styles_options: Each argument of this function must be
+                of the form (object, style, options), where object is one of
+                the following:
 
                 - A TH1 object
                 - A TH2 object
@@ -526,14 +531,16 @@ class Plot(object):
                 - A TGraph object
                 - A TLine object
 
-                and options is a string which will be used for the options
-                argument of the object's Draw method.  Plottables will be
-                rendered in the order provided.  Axes drawing options (e.g.
-                'a' or 'same' should not be provided and will be set
-                automatically).  A TLine may not be the first drawable element.
+                styles is a tuple of the form (line_color, fill_color,
+                marker_style), and options is a string which will be used for
+                the options argument of the object's Draw method.  Plottables
+                will be rendered in the order provided.  Axes drawing options
+                (e.g.  'a' or 'same' should not be provided and will be set
+                automatically).  A TLine may not be the first drawable
+                element.
         """
         # Make sure there are drawables
-        if len(drawables_options) == 0:
+        if len(drawables_styles_options) == 0:
             raise ValueError('must provide at least one plottable')
 
         # Check if we've already drawn
@@ -542,11 +549,11 @@ class Plot(object):
         self._drawn = True
 
         # Remove None-valued drawables
-        drawables_options = tuple(((drawable,option) for drawable,option \
-                in drawables_options if drawable is not None))
+        drawables_styles_options = tuple(((d,s,o) for d,s,o \
+                in drawables_styles_options if d is not None))
 
         # Extract drawables
-        drawables, _ = zip(*drawables_options)
+        drawables, _, _ = zip(*drawables_styles_options)
 
         # Check if there is a maximum value set, and if not, set it
         if self._get_maximum_value() is None:
@@ -557,7 +564,7 @@ class Plot(object):
 
         # Iterate through and draw drawables based on type
         first = True
-        for drawable, option in drawables_options:
+        for drawable, style, option in drawables_styles_options:
             # Check if this a tuple of histogram, error_band
             if isinstance(drawable, tuple):
                 drawable, error_band = drawable
@@ -565,36 +572,46 @@ class Plot(object):
                 error_band = None
 
             # Make a clone of the drawable so we don't modify it
-            drawable = drawable.Clone(_rand_uuid())
-            SetOwnership(drawable, False)
+            clone = drawable.Clone(_rand_uuid())
+            SetOwnership(clone, False)
+
+            # Add it to the list of drawables
+            self._drawables.append(clone)
+
+            # Set the title appropriately
+            clone.SetTitle(drawable.GetTitle())
+
+            # Style the drawable before it is drawn
+            if style is not None:
+                self._style(clone, *style)
 
             # Set the maximum value of the drawable if supported
             # HACK: I wish this could go into _handle_axes, but apparently it
             # can't because ROOT sucks and this has to be set on EVERY
             # drawable, not just the one with the axes.
-            if not is_line(drawable):
-                drawable.SetMaximum(self._get_maximum_value())
+            if not is_line(clone):
+                clone.SetMaximum(self._get_maximum_value())
                 # With TGraph, this is sometimes necessary. Perhaps with TH1
                 # too. I'm not sure what happens if we set log scale, but
                 # we'll cross that bridge then.
-                drawable.SetMinimum(0)
+                clone.SetMinimum(0)
 
             # Include axes if we need
             if first:
-                if is_line(drawable):
+                if is_line(clone):
                     raise ValueError('TLine may not be first drawable')
-                if is_graph(drawable):
+                if is_graph(clone):
                     option += 'a'
             else:
                 option += 'same'
             first = False
 
             # Draw the histogram
-            drawable.Draw(option)
+            clone.Draw(option)
 
             # Handle axes
-            if not is_line(drawable):
-                self._handle_axes(drawable, option)
+            if not is_line(clone):
+                self._handle_axes(clone, option)
 
             # If there is an error band, draw it
             if error_band is not None:
@@ -603,6 +620,42 @@ class Plot(object):
         # HACK: Need to force a redraw of plot axes due to issue with ROOT:
         # http://root.cern.ch/phpBB3/viewtopic.php?f=3&t=14034
         #self._plot.RedrawAxis()
+
+
+    def _style(self, drawable, line_color, fill_color, marker_style):
+        """Applies a style to a drawable object.
+
+        Args:
+            drawable: The object to style
+            line_color, fill_color, marker_style: The style to apply
+        """
+
+        # Translate hex colors if necessary
+        if isinstance(line_color, string_types):
+            line_color = TColor.GetColor(line_color)
+        if isinstance(fill_color, string_types):
+            fill_color = TColor.GetColor(fill_color)
+
+        # Set line color
+        drawable.SetLineColor(line_color)
+
+        # Set fill style and color
+        drawable.SetFillStyle(1001)
+        drawable.SetFillColor(fill_color)
+
+        # Set marker style
+        if marker_style is not None:
+            drawable.SetMarkerStyle(marker_style)
+            drawable.SetMarkerSize(2)
+            drawable.SetMarkerColor(line_color)
+        else:
+            # HACK: Set marker style to an invalid value if not specified,
+            # because we need some way to differentiate rendering in the
+            # legend
+            drawable.SetMarkerStyle(0)
+
+        # Make lines visible
+        drawable.SetLineWidth(2)
 
     def _handle_axes(self, drawable, option):
         """If there is no object currently registered as the owner of the axes
@@ -630,7 +683,9 @@ class Plot(object):
             title_histogram = drawable
 
         # Set the plot title
-        title_histogram.SetTitle(self._title)
+        # TODO: This interferes with the way we're currently drawing the
+        # legend. Need to find some other way of setting the plot title.
+        #title_histogram.SetTitle(self._title)
 
         # Grab axes
         x_axis, y_axis = axes_histogram.GetXaxis(), axes_histogram.GetYaxis()
@@ -921,7 +976,8 @@ class Plot(object):
         # Draw the pave
         self._pave.Draw()
 
-    def draw_legend(self, *drawables):
+    #def draw_legend(self, *drawables):
+    def draw_legend(self):
         """Draws a legend onto the plot with the specified histograms.
 
         It is recommended that you construct the Plot with plot_header = True
@@ -934,9 +990,13 @@ class Plot(object):
         if hasattr(self, '_legend'):
             raise RuntimeError('legend already exists on this plot')
 
+        # Check if the plot has been drawn
+        if not self._drawn:
+            raise RuntimeError('plot must be drawn before the legend')
+
         # Remove None-valued drawables
         drawables = tuple((drawable for drawable \
-                in drawables if drawable is not None))
+                in self._drawables if drawable is not None))
 
         # Switch to the context of the main plot
         self._plot.cd()
