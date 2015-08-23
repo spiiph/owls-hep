@@ -11,7 +11,7 @@ from uuid import uuid4
 from six import string_types
 
 # ROOT imports
-from ROOT import TH2F, TH3F, TEfficiency, TGraphAsymmErrors
+from ROOT import TH2F, TGraphAsymmErrors
 
 # owls-cache imports
 from owls_cache.persistent import cached as persistently_cached
@@ -31,7 +31,6 @@ __all__ = [
 
 # Dummy function to return fake values when parallelizing
 def _efficiency_mocker(process, region, filter, expressions, binnings):
-
     dimensionality = len(binnings)
     if dimensionality == 1:
         return TGraphAsymmErrors()
@@ -45,6 +44,17 @@ def _efficiency_mocker(process, region, filter, expressions, binnings):
 def _efficiency_mapper(process, region, filter, expressions, binnings):
     return (process,region)
 
+def _make_consistent(passed, total):
+    """Helper function to make the passed and total histograms consistent for
+    histogram division/efficiency calculations.
+    """
+    for i in range(passed.GetNbinsX()):
+        if total.GetBinContent(i+1) == 0:
+            total.SetBinContent(i+1, 1.0)
+            passed.SetBinContent(i+1, 0.0)
+        elif total.GetBinContent(i+1) < passed.GetBinContent(i+1):
+            passed.SetBinContent(i+1, total.GetBinContent(i+1))
+            passed.SetBinError(i+1, total.GetBinError(i+1))
 
 @parallelized(_efficiency_mocker, _efficiency_mapper)
 @persistently_cached('owls_hep.efficiency._efficiency')
@@ -53,19 +63,22 @@ def _efficiency(process, region, filter, expressions, binnings):
 
     # TODO: Consider storing the integral of the passed and total histograms
     # for use in the efficiency graph's title at a later point
-    total = histogram(process, region,
-                      expressions, binnings)
     passed = histogram(process, region.varied(filter),
                        expressions, binnings)
+    total = histogram(process, region,
+                      expressions, binnings)
 
-    efficiency = TEfficiency(passed, total)
-    if efficiency.GetDimension() == 1:
-        rep = efficiency.CreateGraph()
+    if total.GetDimension() == 1:
+        # Reset bin content for bins with 0 in the total to total = 1, passed
+        # = 0. Due to negative weights and low stats some bins can have
+        # passed > total; set the content for such bins to passed = total.
+        _make_consistent(passed, total)
+        rep = TGraphAsymmErrors(passed, total)
     else:
-        rep = efficiency.CreateHistogram()
+        rep = passed.Clone()
+        rep.Divide(total)
     rep.SetName(name)
     return rep
-
 
 class Efficiency(Calculation):
     """An efficiency calculation which generates a ROOT TGraphAsymmErrors or
