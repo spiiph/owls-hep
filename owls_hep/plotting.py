@@ -47,6 +47,9 @@ gStyle.SetPalette(53)
 # Turn off stat box by default
 gStyle.SetOptStat(0)
 
+# Turn off the title
+gStyle.SetOptTitle(0)
+
 
 # Convenience function for generating random IDs
 def _rand_uuid():
@@ -418,6 +421,11 @@ class Plot(object):
                                else self.PLOT_MARGINS))
         self._plot.Draw()
 
+        # TODO: Solve titling with a TPaveText as per
+        # https://root.cern.ch/phpBB3/viewtopic.php?t=18282. Wonderful.
+        # Set the plot title after everything else is said and done
+        #self._plot.SetTitle(self._title)
+
         # Store ranges
         self._x_range = x_range
         if y_max is not None:
@@ -617,6 +625,7 @@ class Plot(object):
             if error_band is not None:
                 self._draw_error_band(error_band)
 
+        # TODO: Verify this. It breaks 2D plotting.
         # HACK: Need to force a redraw of plot axes due to issue with ROOT:
         # http://root.cern.ch/phpBB3/viewtopic.php?f=3&t=14034
         #self._plot.RedrawAxis()
