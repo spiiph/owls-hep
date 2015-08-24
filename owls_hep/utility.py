@@ -7,13 +7,37 @@ from uuid import uuid4
 from array import array
 
 # ROOT imports
-from ROOT import TH1F, TH2F, TH3F
+from ROOT import TH1, TH1F, TH2F, TH3F, TGraph, Double
 
 # owls-cache imports
 from owls_cache.persistent import cached as persistently_cached
 
 # owls-hep imports
 from owls_hep.expression import multiplied
+
+def get_bins(binned, include_overflow = False):
+    """Get a list of bin content and bin centers of a TH1 or TGraph.
+
+    Args:
+        binned: The TH1 or TGraph object
+
+    Returns:
+        A list of (x, y) values
+    """
+    points = []
+    if isinstance(binned, TGraph):
+        x = Double()
+        y = Double()
+        for i in range(binned.GetN()):
+            binned.GetPoint(i, x, y)
+            points.append((float(x), float(y)))
+    elif isinstance(binned, TH1):
+        offset = 1 if include_overflow else 0
+        points = [(binned.GetBinCenter(i+1), binned.GetBinContent(i+1))
+                   for i in range(0-offset, binned.GetNbinsX()+offset)]
+    else:
+        raise RuntimeError('Unsupported object: {0}'.format(type(binned)))
+    return points
 
 def make_selection(process, region):
     """Make a selection string out of the selection and weight of a region

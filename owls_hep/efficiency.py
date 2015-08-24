@@ -11,7 +11,7 @@ from uuid import uuid4
 from six import string_types
 
 # ROOT imports
-from ROOT import TH2F, TGraphAsymmErrors
+from ROOT import TH2F, TGraphAsymmErrors, TEfficiency
 
 # owls-cache imports
 from owls_cache.persistent import cached as persistently_cached
@@ -21,7 +21,7 @@ from owls_parallel import parallelized
 
 # owls-hep imports
 from owls_hep.calculation import Calculation
-from owls_hep.utility import make_selection, histogram, integral
+from owls_hep.utility import make_selection, histogram, integral, get_bins
 
 
 # Set up default exports
@@ -48,13 +48,16 @@ def _make_consistent(passed, total):
     """Helper function to make the passed and total histograms consistent for
     histogram division/efficiency calculations.
     """
-    for i in range(passed.GetNbinsX()):
-        if total.GetBinContent(i+1) == 0:
-            total.SetBinContent(i+1, 1.0)
-            passed.SetBinContent(i+1, 0.0)
-        elif total.GetBinContent(i+1) < passed.GetBinContent(i+1):
-            passed.SetBinContent(i+1, total.GetBinContent(i+1))
-            passed.SetBinError(i+1, total.GetBinError(i+1))
+    # Include overflow bins
+    for i in range(passed.GetNbinsX()+2):
+        if total.GetBinContent(i) <= 0:
+            total.SetBinContent(i, 1.0)
+            passed.SetBinContent(i, 0.0)
+        elif passed.GetBinContent(i) < 0:
+            passed.SetBinContent(i, 0)
+        elif total.GetBinContent(i) < passed.GetBinContent(i):
+            passed.SetBinContent(i, total.GetBinContent(i))
+            passed.SetBinError(i, total.GetBinError(i))
 
 @parallelized(_efficiency_mocker, _efficiency_mapper)
 @persistently_cached('owls_hep.efficiency._efficiency')
@@ -74,6 +77,16 @@ def _efficiency(process, region, filter, expressions, binnings):
         # passed > total; set the content for such bins to passed = total.
         _make_consistent(passed, total)
         rep = TGraphAsymmErrors(passed, total)
+
+        #passed_bins = get_bins(passed, True)
+        #total_bins = get_bins(total, True)
+        #rep_bins = get_bins(rep)
+        #if all([x == 0.0 for x,y in rep_bins]):
+            #print('{0} {1}'.format(process._label, filter))
+            #print(['{0:7.2f}'.format(y) for x,y in passed_bins])
+            #print(['{0:7.2f}'.format(y) for x,y in total_bins])
+            #print(['{0:7.2f}'.format(y) for x,y in rep_bins])
+            #print(['({0:.0f}, {1:.2f})'.format(x, y) for x,y in rep_bins])
     else:
         rep = passed.Clone()
         rep.Divide(total)
