@@ -39,7 +39,7 @@ from six import string_types
 # graphical objects or ROOT will crash, often due to a double free or some
 # other nonsense.
 from ROOT import TCanvas, TPad, TH1, TH2, THStack, TGraph, TMath, TLegend, \
-        TLine, TLatex, TPaveText, TColor, SetOwnership, gStyle
+        TLine, TLatex, TPaveText, TPaveLabel, TColor, SetOwnership, gStyle
 
 # Use Dark radiator color map for 2D COLZ plots
 gStyle.SetPalette(53)
@@ -311,9 +311,12 @@ class Plot(object):
     PLOT_MARGINS = (0.125, 0.1, 0.1, 0.1) # Left, Right, Bottom, Top
     PLOT_MARGINS_WITH_RATIO = (0.125, 0.05, 0.025, 0.1)
     PLOT_RATIO_MARGINS = (0.125, 0.05, 0.325, 0.05)
-    PLOT_LEFT_MARGIN = 0.1
+    PLOT_TITLE_X = 0.5
+    PLOT_TITLE_Y = 0.95
+    PLOT_TITLE_TEXT_SIZE = 0.04
+    PLOT_TITLE_TEXT_COLOR = 1
+    PLOT_TITLE_TEXT_FONT = 42
     PLOT_HEADER_HEIGHT = 400 # px
-    PLOT_LEGEND_HEIGHT = 250 # px
     PLOT_LEGEND_LEFT = 0.45
     PLOT_LEGEND_RIGHT = 0.95
     PLOT_LEGEND_BOTTOM = 0.7
@@ -421,10 +424,9 @@ class Plot(object):
                                else self.PLOT_MARGINS))
         self._plot.Draw()
 
-        # TODO: Solve titling with a TPaveText as per
+        # HACK: Draw the plot title.
         # https://root.cern.ch/phpBB3/viewtopic.php?t=18282. Wonderful.
-        # Set the plot title after everything else is said and done
-        #self._plot.SetTitle(self._title)
+        self._draw_title()
 
         # Store ranges
         self._x_range = x_range
@@ -539,7 +541,7 @@ class Plot(object):
                 - A TGraph object
                 - A TLine object
 
-                styles is a tuple of the form (line_color, fill_color,
+                style is a tuple of the form (line_color, fill_color,
                 marker_style), and options is a string which will be used for
                 the options argument of the object's Draw method.  Plottables
                 will be rendered in the order provided.  Axes drawing options
@@ -597,7 +599,9 @@ class Plot(object):
             # HACK: I wish this could go into _handle_axes, but apparently it
             # can't because ROOT sucks and this has to be set on EVERY
             # drawable, not just the one with the axes.
-            if not is_line(clone):
+            if is_scatter(clone):
+                clone.SetMinimum(0)
+            if is_histo(clone) or is_graph(clone) or is_stack(clone):
                 clone.SetMaximum(self._get_maximum_value())
                 # With TGraph, this is sometimes necessary. Perhaps with TH1
                 # too. I'm not sure what happens if we set log scale, but
@@ -845,6 +849,22 @@ class Plot(object):
         if draw_unity or error_band:
             histogram.Draw('e0psame')
 
+    def _draw_title(self):
+        """Draws a title on the plot.
+        """
+        title = TLatex()
+        title.SetTextColor(self.PLOT_TITLE_TEXT_COLOR)
+        title.SetTextFont(self.PLOT_TITLE_TEXT_FONT)
+        title.SetNDC()
+        title.SetTextSize(self.PLOT_TITLE_TEXT_SIZE)
+        title.SetTextAlign(22)
+        title.DrawLatex(
+            self.PLOT_TITLE_X,
+            self.PLOT_TITLE_Y,
+            self._title
+        )
+
+
     def draw_atlas_label(self,
                          luminosity = None,
                          sqrt_s = None,
@@ -867,6 +887,14 @@ class Plot(object):
         self._plot.cd()
 
         # Create the latex object
+        # TODO: Consider using TPaveText to overwrite drawn graphs and
+        # histograms. At least for scatter plots.
+        # TODO: Need a different approach for positioning. Start at TOP,
+        # print ATLAS label (if any), print lumi and sqrt(s), print custom
+        # label. Update current text position after each print.
+        # TODO: Increase readability: Create two sets of constants -
+        # one for plots with ratio and one for plots without. Select the
+        # correct one in draw_ratio_histogram.
         stamp = TLatex()
 
         # Style it
@@ -913,13 +941,20 @@ class Plot(object):
             stamp.SetTextSize((self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
                                if self._ratio_plot
                                else self.PLOT_ATLAS_STAMP_TITLE_SIZE))
-            stamp.DrawLatex(
-                self.PLOT_ATLAS_STAMP_LEFT,
-                (self.PLOT_ATLAS_STAMP_ATLAS_TOP_WITH_RATIO
-                 if self._ratio_plot
-                 else self.PLOT_ATLAS_STAMP_ATLAS_TOP),
-                custom_label
-            )
+            top = (self.PLOT_ATLAS_STAMP_ATLAS_TOP_WITH_RATIO
+                   if self._ratio_plot
+                   else self.PLOT_ATLAS_STAMP_ATLAS_TOP)
+
+            # Draw each line of text, decreasing top for each step
+            for text in custom_label:
+                stamp.DrawLatex(
+                    self.PLOT_ATLAS_STAMP_LEFT,
+                    top,
+                    text
+                )
+                top -= (self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
+                        if self._ratio_plot
+                        else self.PLOT_ATLAS_STAMP_TITLE_SIZE)
 
         elif atlas_label is not None:
             # Draw the label
