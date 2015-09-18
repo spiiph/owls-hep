@@ -325,6 +325,8 @@ class Plot(object):
     PLOT_LEGEND_TOP_WITH_RATIO = 0.88
     PLOT_LEGEND_TEXT_SIZE = 0.02
     PLOT_LEGEND_TEXT_SIZE_WITH_RATIO = 0.03
+    PLOT_LEGEND_ROW_SIZE = 0.03
+    PLOT_LEGEND_ROW_SIZE_WITH_RATIO = 0.04
     PLOT_LEGEND_N_COLUMNS = 1
     PLOT_RATIO_FRACTION = 0.3 # fraction of canvas height
     PLOT_X_AXIS_TITLE_SIZE = 0.045
@@ -469,7 +471,7 @@ class Plot(object):
         # Create a list of the cloned drawables, just to be certain
         self._drawables = []
 
-    def save(self, path):
+    def save(self, path, extensions = ['pdf']):
         """Saves this plot to file.
 
         Args:
@@ -479,7 +481,8 @@ class Plot(object):
         self._canvas.Update()
 
         # Save to file
-        self._canvas.SaveAs(path)
+        for e in extensions:
+            self._canvas.SaveAs(path + '.' + e)
 
     def _get_maximum_value(self):
         """Returns the currently set maximum value (possibly None).
@@ -1083,6 +1086,10 @@ class Plot(object):
         n_entries = len(drawables)
         n_col = self.PLOT_LEGEND_N_COLUMNS
         n_row = int(ceil(float(n_entries) / n_col))
+        self._legend.SetY1(self._legend.GetY2() -
+                n_row * (self.PLOT_LEGEND_ROW_SIZE_WITH_RATIO
+                         if self._ratio_plot
+                         else self.PLOT_LEGEND_ROW_SIZE))
         legend_order = []
         for r in xrange(0, n_row):
             for c in xrange(0, n_col):
