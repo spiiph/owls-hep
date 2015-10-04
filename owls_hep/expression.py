@@ -61,7 +61,17 @@ def _combined(expressions, operator):
     Returns:
         The combined expression string.
     """
-    wrap_expr = ['({0})'.format(e) for e in expressions if e]
+    # Wrap expressions in parens if number of expressions is larger than 1
+    if len(expressions) > 1:
+        wrap_expr = ['({0})'.format(e) for e in expressions if e]
+    else:
+        wrap_expr = expressions
+
+    ## NOTE: Don't wrap expressions in (). Let see if the user can take care
+    ## of it.
+    #wrap_expr = expressions
+
+    # Join expressions if number of expressions is larger than 1
     if len(wrap_expr) > 1:
         return '({0})'.format(' {0} '.format(operator).join(wrap_expr))
     elif len(wrap_expr) == 1:
