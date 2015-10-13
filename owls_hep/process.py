@@ -104,7 +104,12 @@ class Process(object):
         """
         # Hash only files, tree, and patches since those are all that really
         # matter for data loading
-        return hash((self._files, self._tree, self._patches))
+        return hash((self._files, self._tree, self.patches()))
+
+    def files(self):
+        """Returns the files for the process.
+        """
+        return self._files
 
     def metadata(self):
         """Returns the metadata for the process, if any.
@@ -114,7 +119,7 @@ class Process(object):
     def patches(self):
         """Returns an expression of patches for the process, if any.
         """
-        return multiplied(*self._patches)
+        return multiplied(*[p.selection() for p in self._patches])
 
     # NOTE: We could instead return a list of TTrees/TFiles, because using
     # individual TFile/TTree objects might be slightly faster than creating
@@ -153,7 +158,13 @@ class Process(object):
         # All done
         return result
 
-    def patched(self, patch):
+    def patched(self,
+                patch,
+                label = None,
+                line_color =  None,
+                fill_color = None,
+                marker_style = None,
+                metadata = None):
         """Creates a new copy of the process with a patch applied.
 
         Args:
@@ -164,6 +175,11 @@ class Process(object):
         """
         # Create the copy
         result = copy(self)
+        if label is not None: result._label = label
+        if line_color is not None: result._line_color = line_color
+        if fill_color is not None: result._fill_color = fill_color
+        if marker_style is not None: result._marker_style = marker_style
+        if metadata is not None: result._metadata = metadata
 
         # Add the patch
         result._patches += (patch,)
