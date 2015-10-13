@@ -36,7 +36,7 @@ def _histogram_mocker(process, region, expressions, binnings):
 
 # Parallelization mapper batching in combinations of region and process
 def _histogram_mapper(process, region, expressions, binnings):
-    return (process,region)
+    return (process,region,expressions)
 
 @parallelized(_histogram_mocker, _histogram_mapper)
 def _histogram(process, region, expressions, binnings):
@@ -121,6 +121,7 @@ class Histogram(Calculation):
             A ROOT histogram representing the resultant distribution.
         """
         # Print some debug info
+        #print('Process: {0} ({1})'.format(process._label, process._patches))
         #print('Selection: {0}'.format(make_selection(process, region)))
         #print('Expressions: {0}'.format(':'.join(self._expressions)))
         # Compute the histogram
