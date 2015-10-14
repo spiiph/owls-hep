@@ -102,9 +102,15 @@ class Process(object):
     def __hash__(self):
         """Returns a hash for the process.
         """
-        # Hash only files, tree, and patches since those are all that really
-        # matter for data loading
-        return hash((self._files, self._tree, self.patches()))
+        # Hash the state
+        return hash(self.state())
+
+    def state(self):
+        """Returns a the state for the process.
+        """
+        # Use only files, tree, and patches in the state since those are all
+        # that really matter for data loading
+        return (self._files, self._tree, self.patches())
 
     def files(self):
         """Returns the files for the process.

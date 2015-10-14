@@ -13,7 +13,7 @@ __all__ = [
     'Estimation',
 ]
 
-
+# TODO: This is a bit over-engineered.
 # TODO: May want to impose documented requirements on the types of calculations
 # which should be supported by estimation, specifically Count, Histogram, and
 # Uncertainty, but the underlying calculation/estimation combination may be too

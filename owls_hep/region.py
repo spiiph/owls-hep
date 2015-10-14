@@ -142,15 +142,21 @@ class Region(object):
         self._variations = ()
 
     def __hash__(self):
-        """Returns a hash for the region.
+        """Returns a hash for state of the region.
         """
         # Only hash those parameters which affect evaluation
-        return hash((
+        return hash(self.state())
+
+    def state(self):
+        """Returns the state of the region.
+        """
+        # Only hash those parameters which affect evaluation
+        return (
             self._selection,
             self._weight,
             self._weighted,
             self._variations
-        ))
+        )
 
     def label(self):
         """Returns the label for the region, if any.

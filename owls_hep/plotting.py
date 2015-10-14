@@ -33,6 +33,9 @@ from itertools import chain
 from six.moves import range
 from six import string_types
 
+# owls-hep imports
+from owls_hep.utility import add_histograms
+
 # ROOT imports
 # HACK: We import and use SetOwnership because ROOT's memory management is so
 # inconsistent and terrible that we have to stop Python from even touching ROOT
@@ -128,16 +131,7 @@ def combined_histogram(histograms_or_stack):
     """
     # Convert the histograms to an iterable, always unpacking THStack objects
     histograms = drawable_iterable(histograms_or_stack, True)
-
-    # Grab the first histogram, making sure bin errors are calculated before
-    # adding the remaining histograms
-    result = histograms[0].Clone(_rand_uuid())
-    SetOwnership(result, False)
-    if result.GetSumw2N() == 0:
-        result.Sumw2()
-
-    # Add the other histograms to the result
-    map(result.Add, histograms[1:])
+    result = add_histograms(histograms)
 
     return result
 

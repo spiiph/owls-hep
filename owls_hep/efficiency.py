@@ -21,7 +21,9 @@ from owls_parallel import parallelized
 
 # owls-hep imports
 from owls_hep.calculation import Calculation
-from owls_hep.utility import make_selection, histogram, integral, get_bins
+from owls_hep.utility import make_selection, histogram, integral, get_bins, \
+        add_histograms
+from owls_hep.process import Process
 
 
 # Set up default exports
@@ -40,9 +42,10 @@ def _efficiency_mocker(process, region, filter, expressions, binnings):
         raise RuntimeError('Can\'t create an efficiency mocker with more '
                            'than 2 dimensions.')
 
-# Parallelization mapper batching in combinations of region and process
+# Parallelization mapper batching in combinations of region, process, and
+# expressions
 def _efficiency_mapper(process, region, filter, expressions, binnings):
-    return (process,region)
+    return (process,region,expressions)
 
 def _make_consistent(passed, total):
     """Helper function to make the passed and total histograms consistent for
@@ -61,22 +64,41 @@ def _make_consistent(passed, total):
 
 @parallelized(_efficiency_mocker, _efficiency_mapper)
 @persistently_cached('owls_hep.efficiency._efficiency')
-def _efficiency(process, region, filter, expressions, binnings):
+def _efficiency(processes_estimations, region, filter, expressions, binnings):
     name = uuid4().hex
 
     # TODO: Consider storing the integral of the passed and total histograms
     # for use in the efficiency graph's title at a later point
-    passed = histogram(process, region.varied(filter),
-                       expressions, binnings)
-    total = histogram(process, region,
-                      expressions, binnings)
+    passed_histograms = []
+    total_histograms = []
+    for process_estimation in processes_estimations:
+        # Set the default estimation if only a process was given
+        if isinstance(process_estimation, Process):
+            process, estimation = process_estimation, histogram
+        else:
+            process, estimation = process_estimation
 
-    if total.GetDimension() == 1:
+        # Debug printout
+        #print('Process: {0}, Estimation: {1}'. \
+                #format(process.state(), estimation))
+
+        passed_histograms.append(
+                estimation(process, region.varied(filter),
+                           expressions, binnings)
+        )
+        total_histograms.append(
+                estimation(process, region, expressions, binnings)
+        )
+
+    passed_histogram = add_histograms(passed_histograms)
+    total_histogram = add_histograms(total_histograms)
+
+    if total_histogram.GetDimension() == 1:
         # Reset bin content for bins with 0 in the total to total = 1, passed
         # = 0. Due to negative weights and low stats some bins can have
         # passed > total; set the content for such bins to passed = total.
-        _make_consistent(passed, total)
-        rep = TGraphAsymmErrors(passed, total)
+        _make_consistent(passed_histogram, total_histogram)
+        rep = TGraphAsymmErrors(passed_histogram, total_histogram)
 
         #passed_bins = get_bins(passed, True)
         #total_bins = get_bins(total, True)
@@ -88,8 +110,8 @@ def _efficiency(process, region, filter, expressions, binnings):
             #print(['{0:7.2f}'.format(y) for x,y in rep_bins])
             #print(['({0:.0f}, {1:.2f})'.format(x, y) for x,y in rep_bins])
     else:
-        rep = passed.Clone()
-        rep.Divide(total)
+        rep = passed_histogram.Clone(name)
+        rep.Divide(total_histogram)
     rep.SetName(name)
     return rep
 
@@ -146,12 +168,14 @@ class Efficiency(Calculation):
         """
         return self._y_label
 
-    def __call__(self, process, region, filter):
+    def __call__(self, processes_estimations, region, filter):
         """Histograms weighted events passing unfiltered and filtered
         variants of a region's selection into an efficiency plot.
 
         Args:
-            process: The process whose weighted events should be histogrammed
+            processes_estimations: A single process, a (process, estimation)
+                pair, or a list of the latter for which to compute the
+                efficiency
             region: The region providing selection/weighting for the
                 efficiency calculation
             filter: The filter to apply to the region for the efficiency
@@ -164,16 +188,17 @@ class Efficiency(Calculation):
         #print('Selection: {0}'.format(make_selection(process, region)))
         #print('Expressions: {0}'.format(':'.join(self._expressions)))
 
-        result = _efficiency(process, region, filter,
+        # Listify
+        if not isinstance(processes_estimations, tuple):
+            processes_estimations = (processes_estimations,)
+
+        result = _efficiency(processes_estimations, region, filter,
                              self._expressions, self._binnings)
 
         # Set labels
         result.SetTitle(self._title)
         result.GetXaxis().SetTitle(self._x_label)
         result.GetYaxis().SetTitle(self._y_label)
-
-        # Style the histogram
-        process.style(result)
 
         # All done
         return result

@@ -34,7 +34,8 @@ def _histogram_mocker(process, region, expressions, binnings):
     dimensionality = len(binnings)
     return create_histogram(dimensionality, name, binnings)
 
-# Parallelization mapper batching in combinations of region and process
+# Parallelization mapper batching in combinations of region,process, and
+# expressions
 def _histogram_mapper(process, region, expressions, binnings):
     return (process,region,expressions)
 

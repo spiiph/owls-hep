@@ -7,7 +7,7 @@ from uuid import uuid4
 from array import array
 
 # ROOT imports
-from ROOT import TH1, TH1F, TH2F, TH3F, TGraph, Double
+from ROOT import TH1, TH1F, TH2F, TH3F, TGraph, Double, SetOwnership
 
 # owls-cache imports
 from owls_cache.persistent import cached as persistently_cached
@@ -143,3 +143,26 @@ def histogram(process, region, expressions, binnings):
     chain = process.load()
     chain.Draw(expression, selection)
     return h
+
+
+def add_histograms(histograms):
+    """Adds histograms and returns the result with bin errors calculated.
+
+    Args:
+        histograms: An iterable of histograms
+
+    Returns:
+        A histogram representing the sum of the input histograms, with bin
+        errors calculated.
+    """
+    # Grab the first histogram, making sure bin errors are calculated before
+    # adding the remaining histograms
+    result = histograms[0].Clone(uuid4().hex)
+    SetOwnership(result, False)
+    if result.GetSumw2N() == 0:
+        result.Sumw2()
+
+    # Add the other histograms to the result
+    map(result.Add, histograms[1:])
+
+    return result
