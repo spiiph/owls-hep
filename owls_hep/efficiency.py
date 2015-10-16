@@ -145,5 +145,8 @@ class Efficiency(Calculation):
         result.GetXaxis().SetTitle(self._x_label)
         result.GetYaxis().SetTitle(self._y_label)
 
+        # Style the efficiency
+        process.style(result)
+
         # All done
         return result

@@ -182,6 +182,9 @@ def _make_consistent(passed, total):
         elif total.GetBinContent(i) < passed.GetBinContent(i):
             passed.SetBinContent(i, total.GetBinContent(i))
             passed.SetBinError(i, total.GetBinError(i))
+        if passed.GetBinContent(i) == 0:
+            total.SetBinError(i, 0)
+            passed.SetBinError(i, 0)
 
 def efficiency(total, passed):
     name = uuid4().hex
