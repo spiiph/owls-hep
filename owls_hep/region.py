@@ -158,6 +158,11 @@ class Region(object):
             self._variations
         )
 
+    def __str__(self):
+        """Returns the string representation of the region.
+        """
+        return 'Region({0}, {1})'.format(self._label, self.state())
+
     def label(self):
         """Returns the label for the region, if any.
         """
