@@ -41,8 +41,9 @@ from owls_hep.utility import add_histograms
 # inconsistent and terrible that we have to stop Python from even touching ROOT
 # graphical objects or ROOT will crash, often due to a double free or some
 # other nonsense.
-from ROOT import TCanvas, TPad, TH1, TH2, THStack, TGraph, TMath, TLegend, \
-        TLine, TLatex, TPaveText, TPaveLabel, TColor, SetOwnership, gStyle
+from ROOT import TCanvas, TPad, TH1, TH2, THStack, TGraph, TMath, TF1, \
+        TLegend, TLine, TLatex, TPaveText, TPaveLabel, TColor, SetOwnership, \
+        gStyle
 
 # Use Dark radiator color map for 2D COLZ plots
 gStyle.SetPalette(53)
@@ -67,21 +68,84 @@ def is_histo(h):
 def is_scatter(h):
     return isinstance(h, TH2)
 
-
 # Convenience function to check if an object is a THStack
 def is_stack(h):
     return isinstance(h, THStack)
-
 
 # Convenience function to check if an object is a TGraph
 def is_graph(g):
     return isinstance(g, TGraph)
 
-
 # Convenience function to check if an object is a TLine
 def is_line(l):
     return isinstance(l, TLine)
 
+# Convenience function to check if an object is a TF1
+def is_function(f):
+    return isinstance(f, TF1)
+
+
+def enable_stat(enable = True):
+    if enable:
+        gStyle.SetOptStat(1111)
+    else:
+        gStyle.SetOptStat(0)
+
+def enable_fit(enable = True):
+    if enable:
+        gStyle.SetOptFit(1111)
+    else:
+        gStyle.SetOptFit(0)
+
+def style_histogram(drawable, line_color, fill_color, marker_style,
+                    line_size = 2):
+    """Applies a style to a drawable object.
+
+    Args:
+        drawable: The object to style
+        line_color, fill_color, marker_style: The style to apply
+    """
+
+    # Translate hex colors if necessary
+    if isinstance(line_color, string_types):
+        line_color = TColor.GetColor(line_color)
+    if isinstance(fill_color, string_types):
+        fill_color = TColor.GetColor(fill_color)
+
+    # Set line color and width
+    drawable.SetLineColor(line_color)
+    drawable.SetLineWidth(line_size)
+
+    # Set fill style and color
+    drawable.SetFillStyle(1001)
+    drawable.SetFillColor(fill_color)
+
+    # Set marker style
+    if marker_style is not None:
+        drawable.SetMarkerStyle(marker_style)
+        drawable.SetMarkerSize(2)
+        drawable.SetMarkerColor(line_color)
+    else:
+        # HACK: Set marker style to an invalid value if not specified,
+        # because we need some way to differentiate rendering in the legend
+        drawable.SetMarkerStyle(0)
+
+def style_line(drawable, line_color, line_style, line_size = 1):
+    """Applies a style to a drawable with TAttLine capabilities.
+
+    Args:
+        drawable: The object to style
+        line_color, line_style, line_size: The style to apply
+    """
+
+    # Translate hex colors if necessary
+    if isinstance(line_color, string_types):
+        line_color = TColor.GetColor(line_color)
+
+    # Set line style, color, and width
+    drawable.SetLineColor(line_color)
+    drawable.SetLineStyle(line_style)
+    drawable.SetLineWidth(line_size)
 
 def drawable_iterable(drawable, unpack_stacks = False, reverse_stacks = False):
     """Convenience method to get an iterable object from a drawable.
@@ -109,7 +173,8 @@ def drawable_iterable(drawable, unpack_stacks = False, reverse_stacks = False):
             result.reverse()
 
         return result
-    elif is_histo(drawable) or is_graph(drawable) or is_line(drawable):
+    elif is_histo(drawable) or is_graph(drawable) or is_line(drawable) \
+            or is_function(drawable):
         return (drawable,)
 
     # Already an iterable
@@ -178,6 +243,8 @@ def maximum_value(drawables):
                 maximum = 1.0
         elif is_line(drawable):
             maximum = max(drawable.GetY1(), drawable.GetY2())
+        elif is_function(drawable):
+            maximum = 1.0
         else:
             raise ValueError('unsupported drawable type')
 
@@ -322,6 +389,12 @@ class Plot(object):
     PLOT_LEGEND_ROW_SIZE = 0.04
     PLOT_LEGEND_ROW_SIZE_WITH_RATIO = 0.045
     PLOT_LEGEND_N_COLUMNS = 1
+    PLOT_STAT_LEFT = 0.55
+    PLOT_STAT_RIGHT = 0.85
+    PLOT_STAT_BOTTOM = 0.15
+    PLOT_STAT_TOP = 0.4
+    PLOT_STAT_TEXT_FONT = 42
+    PLOT_STAT_TEXT_SIZE = 0.03
     PLOT_RATIO_FRACTION = 0.3 # fraction of canvas height
     PLOT_X_AXIS_TITLE_SIZE = 0.045
     PLOT_X_AXIS_TITLE_SIZE_WITH_RATIO = 0.13
@@ -580,14 +653,18 @@ class Plot(object):
             SetOwnership(clone, False)
 
             # Add it to the list of drawables
-            self._drawables.append(clone)
+            if not is_function(drawable):
+                self._drawables.append(clone)
 
             # Set the title appropriately
             clone.SetTitle(drawable.GetTitle())
 
             # Style the drawable before it is drawn
             if style is not None:
-                self._style(clone, *style)
+                if is_line(drawable) or is_function(drawable):
+                    style_line(clone, *style)
+                else:
+                    style_histogram(clone, *style)
 
             # Set the maximum value of the drawable if supported
             # HACK: I wish this could go into _handle_axes, but apparently it
@@ -612,8 +689,26 @@ class Plot(object):
                 option += 'same'
             first = False
 
-            # Draw the histogram
-            clone.Draw(option)
+            # Draw the drawable (unless it's a function)
+            if not is_function(clone):
+                clone.Draw(option)
+
+            if is_graph(clone) or is_histo(clone):
+                funcs = clone.GetListOfFunctions()
+                if len(funcs) > 0:
+                    # HACK: Need to call Update() to paint the fit stats
+                    self._plot.Update()
+                    # Add fit function to legend
+                    funcs[0].SetTitle('Fit')
+                    self._legend_extras.append(funcs[0])
+                    stats = clone.FindObject("stats")
+                    stats.SetTextFont(Plot.PLOT_STAT_TEXT_FONT)
+                    stats.SetTextSize(Plot.PLOT_STAT_TEXT_SIZE)
+                    stats.SetX1NDC(Plot.PLOT_STAT_LEFT)
+                    stats.SetY1NDC(Plot.PLOT_STAT_BOTTOM)
+                    stats.SetX2NDC(Plot.PLOT_STAT_RIGHT)
+                    stats.SetY2NDC(Plot.PLOT_STAT_TOP)
+            
 
             # Handle axes
             if not is_line(clone):
@@ -627,42 +722,6 @@ class Plot(object):
         # HACK: Need to force a redraw of plot axes due to issue with ROOT:
         # http://root.cern.ch/phpBB3/viewtopic.php?f=3&t=14034
         #self._plot.RedrawAxis()
-
-
-    def _style(self, drawable, line_color, fill_color, marker_style):
-        """Applies a style to a drawable object.
-
-        Args:
-            drawable: The object to style
-            line_color, fill_color, marker_style: The style to apply
-        """
-
-        # Translate hex colors if necessary
-        if isinstance(line_color, string_types):
-            line_color = TColor.GetColor(line_color)
-        if isinstance(fill_color, string_types):
-            fill_color = TColor.GetColor(fill_color)
-
-        # Set line color
-        drawable.SetLineColor(line_color)
-
-        # Set fill style and color
-        drawable.SetFillStyle(1001)
-        drawable.SetFillColor(fill_color)
-
-        # Set marker style
-        if marker_style is not None:
-            drawable.SetMarkerStyle(marker_style)
-            drawable.SetMarkerSize(2)
-            drawable.SetMarkerColor(line_color)
-        else:
-            # HACK: Set marker style to an invalid value if not specified,
-            # because we need some way to differentiate rendering in the
-            # legend
-            drawable.SetMarkerStyle(0)
-
-        # Make lines visible
-        drawable.SetLineWidth(2)
 
     def _handle_axes(self, drawable, option):
         """If there is no object currently registered as the owner of the axes
