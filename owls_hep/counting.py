@@ -12,7 +12,7 @@ from owls_parallel import parallelized
 
 # owls-hep imports
 from owls_hep.calculation import Calculation
-from owls_hep.utility import make_selection, integral
+from owls_hep.utility import make_selection, integral, create_histogram
 
 @parallelized(lambda p, r: 1.0, lambda p, r: (p, r))
 @persistently_cached('owls_hep.counting._count', lambda p, r: (p, r))
@@ -33,11 +33,10 @@ def _count(process, region):
     selection = make_selection(process, region)
 
     # Create the expression string and specify which histogram to fill
-    expression = ' : '.join(expressions) + '>>{0}'.format(name)
+    expression = '1>>{0}'.format(name)
 
     # Create the bare histogram
-    dimensionality = len(expressions)
-    h = _create_histogram(dimensionality, name, binnings)
+    h = create_histogram(1, name, ((1, 0.5, 1.5),))
 
     # Load the chain
     chain = process.load()
