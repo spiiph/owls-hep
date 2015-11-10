@@ -221,3 +221,57 @@ class Process(object):
 
         # Make lines visible
         histogram.SetLineWidth(2)
+
+class MultiProcess(object):
+    """Represents a combined process whose events may be encoded in one or
+    more data processes and which should be rendered according to a certain
+    style.
+    """
+
+    def __init__(self,
+                 subprocesses,
+                 tree,
+                 label,
+                 line_color = 1,
+                 fill_color = 0,
+                 marker_style = None,
+                 metadata = None):
+        """Initializes a new instance of the Process class.
+
+        Args:
+            subporocesses: An iterable of processes
+            label: The ROOT TLatex label string to use when rendering the
+                process
+            line_color: The ROOT TColor number or hex string (#rrggbb) to use
+                as the line color when rendering the process
+            fill_color: The ROOT TColor number or hex string (#rrggbb) to use
+                as the fill color when rendering the process
+            marker_style: The ROOT TMarker number to use as the marker style
+                when rendering the process
+            metadata: A (pickleable) object containing optional metadata
+        """
+        # Store parameters
+        self._subprocesses = subprocesses
+        self._label = label
+        self._line_color = line_color
+        self._fill_color = fill_color
+        self._marker_style = marker_style
+        self._metadata = metadata
+
+        # Translate hex colors if necessary
+        if isinstance(self._line_color, string_types):
+            self._line_color = TColor.GetColor(self._line_color)
+        if isinstance(self._fill_color, string_types):
+            self._fill_color = TColor.GetColor(self._fill_color)
+
+    def __hash__(self):
+        raise NotImplementedError('method not supported')
+
+    def load(self, properties):
+        raise NotImplementedError('method not supported')
+
+    def retreed(self, tree):
+        raise NotImplementedError('method not supported')
+
+    def patched(self, patch):
+        raise NotImplementedError('method not supported')
