@@ -48,6 +48,23 @@ def variable_negated(expression, variable):
     # negated
     return _property_regex.sub(negator, expression)
 
+def variable_substituted(expression, variable, substitution):
+    """Substitute all instances of the specified variable within the
+    expression.
+
+    Args:
+        expression: The expression string
+        variable: The variable name
+        substitution: The expression to substitute the variable with
+
+    Returns:
+        A version of the expression with instances of the specified variable
+        substituted.
+    """
+    # Return an expression with all instances of this particular variable
+    # negated
+    return re.sub(variable, substitution, expression)
+
 
 def _combined(expressions, operator):
     """Private method to handle expression composition with a binary infix
