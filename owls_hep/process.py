@@ -7,6 +7,7 @@ import warnings
 from inspect import getsource
 from copy import copy
 from os.path import isfile
+from os import stat
 
 # Six imports
 from six import string_types
@@ -83,6 +84,7 @@ class Process(object):
         """
         # Store parameters
         self._files = tuple(files)
+        self._files_size_time = None
         self._tree = tree
         self._label = label
         self._line_color = line_color
@@ -105,12 +107,20 @@ class Process(object):
         # Hash the state
         return hash(self.state())
 
+    def _get_files_size_time(self):
+        """Populate the file sizes and modification times tuple.
+        """
+        if self._files_size_time is None:
+            self._files_size_time = tuple([(stat(f).st_size, stat(f).st_mtime)
+                                           for f in self._files])
+
     def state(self):
         """Returns a the state for the process.
         """
         # Use only files, tree, and patches in the state since those are all
         # that really matter for data loading
-        return (self._files, self._tree, self.patches())
+        self._get_files_size_time()
+        return (self._files, self._files_size_time, self._tree, self.patches())
 
     def files(self):
         """Returns the files for the process.
