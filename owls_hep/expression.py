@@ -5,11 +5,25 @@ expressions.
 
 # System imports
 import re
+from functools import partial
+
+# Create a utility to substitute definitions enclosed in [] within a
+# selection string. This functionality is used mostly in regions.py and
+# models.py files to increase level of abstraction.
+_finder = re.compile('\[(.*?)\]')
+def _translator(match, definitions):
+    d = definitions[match.group(1)]
+    if d:
+        return '({0})'.format(d)
+    else:
+        return ''
+def expression_substitute(expr, definitions):
+    translator = partial(_translator, definitions = definitions)
+    return _finder.sub(translator, expr)
 
 
 # _property_regex is used to find properties in expression strings
 _property_regex = re.compile('[A-Za-z_]\w*(?!\w*\s*\()')
-
 
 def negated(expression):
     """Returns a negated version of the expression.
