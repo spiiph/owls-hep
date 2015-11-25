@@ -176,11 +176,11 @@ class Region(object):
     # NOTE: I'm not sure I like this late execution of the variations. I'd
     # much rather apply the variations directly. But perhaps there's some
     # deeper meaning here.
-    def varied(self, variation):
+    def varied(self, variations):
         """Creates a copy of the region with the specified variation applied.
 
         Args:
-            variation: The variation to apply
+            variations: The variation(s) to apply
 
         Returns:
             A duplicate region, but with the specified variation applied.
@@ -189,9 +189,11 @@ class Region(object):
         result = copy(self)
 
         # Add the variation
-        result._variations += (variation,)
+        if isinstance(variations, tuple):
+            result._variations += variations
+        else:
+            result._variations += (variations,)
 
-        # All done
         return result
 
     def weighted(self, weighting_enabled):
