@@ -7,7 +7,7 @@ from uuid import uuid4
 from array import array
 
 # ROOT imports
-from ROOT import TH1, TH1F, TH2F, TH3F, TGraph, Double, SetOwnership, \
+from ROOT import TH1, TH1F, TH2F, TH3F, TF1, TGraph, Double, SetOwnership, \
         TGraphAsymmErrors
 
 # owls-cache imports
@@ -15,6 +15,23 @@ from owls_cache.persistent import cached as persistently_cached
 
 # owls-hep imports
 from owls_hep.expression import multiplied
+
+def clone(drawable):
+    """Handle corner cases that obj.Clone() can't, because ROOT is so
+    inconsistent it hurts.
+
+    Args:
+        drawable: The drawable object
+
+    Returns:
+        A clone of the drawable object
+    """
+    if isinstance(drawable, TF1):
+        o = TF1(drawable)
+        o.SetName(uuid4().hex)
+        return o
+    else:
+        return drawable.Clone(uuid4().hex)
 
 def get_bins(binned, include_overflow = False):
     """Get a list of bin content and bin centers of a TH1 or TGraph.

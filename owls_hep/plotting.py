@@ -34,7 +34,7 @@ from six.moves import range
 from six import string_types
 
 # owls-hep imports
-from owls_hep.utility import add_histograms
+from owls_hep.utility import add_histograms, clone
 
 # ROOT imports
 # HACK: We import and use SetOwnership because ROOT's memory management is so
@@ -390,11 +390,16 @@ class Plot(object):
     PLOT_LEGEND_ROW_SIZE_WITH_RATIO = 0.045
     PLOT_LEGEND_N_COLUMNS = 1
     PLOT_STAT_LEFT = 0.55
+    PLOT_STAT_LEFT_WITH_RATIO = 0.60
     PLOT_STAT_RIGHT = 0.85
+    PLOT_STAT_RIGHT_WITH_RATIO = 0.93
     PLOT_STAT_BOTTOM = 0.15
+    PLOT_STAT_BOTTOM_WITH_RATIO = 0.07
     PLOT_STAT_TOP = 0.4
+    PLOT_STAT_TOP_WITH_RATIO = 0.45
     PLOT_STAT_TEXT_FONT = 42
     PLOT_STAT_TEXT_SIZE = 0.03
+    PLOT_STAT_TEXT_SIZE_WITH_RATIO = 0.04
     PLOT_RATIO_FRACTION = 0.3 # fraction of canvas height
     PLOT_X_AXIS_TITLE_SIZE = 0.045
     PLOT_X_AXIS_TITLE_SIZE_WITH_RATIO = 0.13
@@ -410,9 +415,10 @@ class Plot(object):
     PLOT_Y_AXIS_TITLE_OFFSET = 1.0
     PLOT_Y_AXIS_TITLE_OFSET_WITH_RATIO = 0.95
     PLOT_Y_AXIS_LABEL_SIZE_WITH_RATIO = 0.05
-    PLOT_RATIO_Y_AXIS_TITLE_SIZE = 0.09
-    PLOT_RATIO_Y_AXIS_TITLE_OFFSET = 0.575
+    PLOT_RATIO_Y_AXIS_TITLE_SIZE = 0.12
+    PLOT_RATIO_Y_AXIS_TITLE_OFFSET = 0.48
     PLOT_RATIO_Y_AXIS_LABEL_SIZE = 0.12
+    PLOT_RATIO_Y_AXIS_NDIVISIONS = 504
     PLOT_RATIO_Y_AXIS_MINIMUM = 0.6
     PLOT_RATIO_Y_AXIS_MAXIMUM = 1.4
     PLOT_ERROR_BAND_FILL_STYLE = 3254 # Diagonal lines
@@ -532,8 +538,9 @@ class Plot(object):
         # which need to be added to any legends created
         self._legend_extras = []
 
-        # Create a list of the cloned drawables, just to be certain
+        # Create lists of the cloned drawables, just to be certain
         self._drawables = []
+        self._ratio_drawables = []
 
     def save(self, path, extensions = ['pdf']):
         """Saves this plot to file.
@@ -649,70 +656,78 @@ class Plot(object):
                 error_band = None
 
             # Make a clone of the drawable so we don't modify it
-            clone = drawable.Clone(_rand_uuid())
-            SetOwnership(clone, False)
+            o = clone(drawable)
+            SetOwnership(o, False)
 
             # Add it to the list of drawables
-            if not is_function(drawable):
-                self._drawables.append(clone)
+            self._drawables.append(o)
 
             # Set the title appropriately
-            clone.SetTitle(drawable.GetTitle())
+            o.SetTitle(drawable.GetTitle())
 
             # Style the drawable before it is drawn
             if style is not None:
                 if is_line(drawable) or is_function(drawable):
-                    style_line(clone, *style)
+                    style_line(o, *style)
                 else:
-                    style_histogram(clone, *style)
+                    style_histogram(o, *style)
 
             # Set the maximum value of the drawable if supported
             # HACK: I wish this could go into _handle_axes, but apparently it
             # can't because ROOT sucks and this has to be set on EVERY
             # drawable, not just the one with the axes.
-            if is_scatter(clone):
-                clone.SetMinimum(0)
-            if is_histo(clone) or is_graph(clone) or is_stack(clone):
-                clone.SetMaximum(self._get_maximum_value())
+            if is_scatter(o):
+                o.SetMinimum(0)
+            if is_histo(o) or is_graph(o) or is_stack(o):
+                o.SetMaximum(self._get_maximum_value())
                 # With TGraph, this is sometimes necessary. Perhaps with TH1
                 # too. I'm not sure what happens if we set log scale, but
                 # we'll cross that bridge then.
-                clone.SetMinimum(0)
+                o.SetMinimum(0)
 
-            # Include axes if we need
+            # Include axes if we need to. Store the x-axis range.
             if first:
-                if is_line(clone):
+                if is_line(o):
                     raise ValueError('TLine may not be first drawable')
-                if is_graph(clone):
+                if is_graph(o):
                     option += 'a'
             else:
                 option += 'same'
             first = False
 
-            # Draw the drawable (unless it's a function)
-            if not is_function(clone):
-                clone.Draw(option)
+            # Draw the drawable
+            o.Draw(option)
 
-            if is_graph(clone) or is_histo(clone):
-                funcs = clone.GetListOfFunctions()
-                if len(funcs) > 0:
+            # TODO: This method of plotting the stats box is a huge hack. We
+            # should plot fit functions separately, and move the stats box
+            # plotting to its own function. Home grow everything, the only
+            # way you can make ROOT work.
+            if is_graph(o) or is_histo(o):
+                if len(o.GetListOfFunctions()) > 0:
                     # HACK: Need to call Update() to paint the fit stats
                     self._plot.Update()
-                    # Add fit function to legend
-                    funcs[0].SetTitle('Fit')
-                    self._legend_extras.append(funcs[0])
-                    stats = clone.FindObject("stats")
-                    stats.SetTextFont(Plot.PLOT_STAT_TEXT_FONT)
-                    stats.SetTextSize(Plot.PLOT_STAT_TEXT_SIZE)
-                    stats.SetX1NDC(Plot.PLOT_STAT_LEFT)
-                    stats.SetY1NDC(Plot.PLOT_STAT_BOTTOM)
-                    stats.SetX2NDC(Plot.PLOT_STAT_RIGHT)
-                    stats.SetY2NDC(Plot.PLOT_STAT_TOP)
-            
+                    stats = o.FindObject("stats")
+                    if stats:
+                        stats.SetTextFont(Plot.PLOT_STAT_TEXT_FONT)
+                        stats.SetTextSize((Plot.PLOT_STAT_TEXT_SIZE_WITH_RATIO
+                                           if self._ratio_plot
+                                           else Plot.PLOT_STAT_TEXT_SIZE))
+                        stats.SetX1NDC((Plot.PLOT_STAT_LEFT_WITH_RATIO
+                                        if self._ratio_plot
+                                        else Plot.PLOT_STAT_LEFT))
+                        stats.SetY1NDC((Plot.PLOT_STAT_BOTTOM_WITH_RATIO
+                                        if self._ratio_plot
+                                        else Plot.PLOT_STAT_BOTTOM))
+                        stats.SetX2NDC((Plot.PLOT_STAT_RIGHT_WITH_RATIO
+                                        if self._ratio_plot
+                                        else Plot.PLOT_STAT_RIGHT))
+                        stats.SetY2NDC((Plot.PLOT_STAT_TOP_WITH_RATIO
+                                        if self._ratio_plot
+                                        else Plot.PLOT_STAT_TOP))
 
             # Handle axes
-            if not is_line(clone):
-                self._handle_axes(clone, option)
+            if not is_line(o):
+                self._handle_axes(o, option)
 
             # If there is an error band, draw it
             if error_band is not None:
@@ -741,17 +756,13 @@ class Plot(object):
             axes_histogram = drawable.GetHistogram()
         else:
             axes_histogram = drawable
+        self._axes_object = axes_histogram
 
         # Grab the histogram used for title manipulation
         if is_stack(drawable):
             title_histogram = drawable.GetHists()[0]
         else:
             title_histogram = drawable
-
-        # Set the plot title
-        # TODO: This interferes with the way we're currently drawing the
-        # legend. Need to find some other way of setting the plot title.
-        #title_histogram.SetTitle(self._title)
 
         # Grab axes
         x_axis, y_axis = axes_histogram.GetXaxis(), axes_histogram.GetYaxis()
@@ -762,9 +773,10 @@ class Plot(object):
         if self._y_title is None:
             self._y_title = title_histogram.GetYaxis().GetTitle()
 
-        # Style x-axis, or hide it if this plot has a ratio plot
         if self._x_range is not None:
             x_axis.SetRangeUser(*self._x_range)
+
+        # Style x-axis, or hide it if this plot has a ratio plot
         if self._ratio_plot:
             x_axis.SetLabelOffset(999)
             x_axis.SetTitleOffset(999)
@@ -848,13 +860,16 @@ class Plot(object):
         x_axis.SetLabelSize(self.PLOT_X_AXIS_LABEL_SIZE_WITH_RATIO)
         x_axis.SetTitle(self._x_title)
         if self._x_range:
-            x_axis.SetRangeUser(*self._x_range)
+            x_axis.SetLimits(*self._x_range)
+        else:
+            x_axis.SetLimits(self._axes_object.GetXaxis().GetXmin(),
+                             self._axes_object.GetXaxis().GetXmax())
         y_axis.SetTitleSize(self.PLOT_RATIO_Y_AXIS_TITLE_SIZE)
         y_axis.SetTitleOffset(self.PLOT_RATIO_Y_AXIS_TITLE_OFFSET)
         y_axis.SetLabelSize(self.PLOT_RATIO_Y_AXIS_LABEL_SIZE)
         y_axis.SetRangeUser(self.PLOT_RATIO_Y_AXIS_MINIMUM,
                             self.PLOT_RATIO_Y_AXIS_MAXIMUM)
-        y_axis.SetNdivisions(504, False)
+        y_axis.SetNdivisions(self.PLOT_RATIO_Y_AXIS_NDIVISIONS, False)
 
         # Draw it
         # NOTE: Have to specify E0 or points out of the vertical range won't
@@ -901,6 +916,72 @@ class Plot(object):
         # band, but use 'same' so that the axes/ticks don't cover the red line
         if draw_unity or error_band:
             histogram.Draw('e0psame')
+
+    def draw_ratios(self,
+                    drawables_styles_options,
+                    draw_unity = True,
+                    y_range = None):
+        """Draws a drawable to the ratio pad.
+
+        Args:
+            drawable: The drawable to draw
+            draw_unity: Whether or not to draw a line at 1
+        """
+        # Check if we've already drawn
+        if self._ratio_drawn:
+            raise RuntimeError('cannot draw twice to a plot')
+        self._ratio_drawn = True
+
+        # Switch to the context of the ratio pad
+        self._ratio_plot.cd()
+
+        # Iterate through and draw drawables based on type
+        first = True
+        for drawable, style, option in drawables_styles_options:
+            # Make a clone of the drawable so we don't modify it
+            o = clone(drawable)
+            SetOwnership(o, False)
+
+            # Add it to the list of drawables
+            self._ratio_drawables.append(o)
+
+            # Set the title appropriately
+            o.SetTitle(drawable.GetTitle())
+
+            # Style the drawable before it is drawn
+            if style is not None:
+                style_histogram(o, *style)
+
+            if y_range is not None:
+                o.SetMinimum(y_range[0])
+                o.SetMaximum(y_range[1])
+
+            # Include axes if we need
+            if first:
+                x_axis, y_axis = o.GetXaxis(), o.GetYaxis()
+                if is_graph(o):
+                    option += 'a'
+            else:
+                option += 'same'
+            first = False
+
+            # Draw the drawable
+            o.Draw(option)
+
+        x_axis.SetTitleSize(self.PLOT_X_AXIS_TITLE_SIZE_WITH_RATIO)
+        x_axis.SetTitleOffset(self.PLOT_X_AXIS_TITLE_OFFSET_WITH_RATIO)
+        x_axis.SetLabelSize(self.PLOT_X_AXIS_LABEL_SIZE_WITH_RATIO)
+        x_axis.SetTitle(self._x_title)
+        if self._x_range:
+            x_axis.SetLimits(*self._x_range)
+        else:
+            x_axis.SetLimits(self._axes_object.GetXaxis().GetXmin(),
+                             self._axes_object.GetXaxis().GetXmax())
+        y_axis.SetTitleSize(self.PLOT_RATIO_Y_AXIS_TITLE_SIZE)
+        y_axis.SetTitleOffset(self.PLOT_RATIO_Y_AXIS_TITLE_OFFSET)
+        y_axis.SetLabelSize(self.PLOT_RATIO_Y_AXIS_LABEL_SIZE)
+        y_axis.SetNdivisions(self.PLOT_RATIO_Y_AXIS_NDIVISIONS, False)
+
 
     def _draw_title(self):
         """Draws a title on the plot.
@@ -1062,8 +1143,7 @@ class Plot(object):
         # Draw the pave
         self._pave.Draw()
 
-    #def draw_legend(self, *drawables):
-    def draw_legend(self):
+    def draw_legend(self, use_functions = False):
         """Draws a legend onto the plot with the specified histograms.
 
         It is recommended that you construct the Plot with plot_header = True
@@ -1071,6 +1151,7 @@ class Plot(object):
 
         Args:
             drawables: The elements to include in the legend (via AddEntry)
+            use_functions: Add associated functions to the legend
         """
         # Check if we already have a legend
         if hasattr(self, '_legend'):
@@ -1081,8 +1162,14 @@ class Plot(object):
             raise RuntimeError('plot must be drawn before the legend')
 
         # Remove None-valued drawables
-        drawables = tuple((drawable for drawable \
-                in self._drawables if drawable is not None))
+        drawables = tuple((drawable for drawable
+                           in self._drawables
+                           if drawable is not None))
+
+        # If we shouldn't add functions to the legend, remove them
+        if not use_functions:
+            drawables = tuple((drawable for drawable
+                               in drawables if not isinstance(drawable, TF1)))
 
         # Switch to the context of the main plot
         self._plot.cd()
