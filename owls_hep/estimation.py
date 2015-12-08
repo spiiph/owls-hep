@@ -167,3 +167,21 @@ class Plain(Estimation):
             (1.0, False, process, region)
         ]
 
+class MonteCarlo(Estimation):
+    def __init__(self, calculation, luminosity):
+        """Initializes a new instance of the MonteCarlo class.
+
+        Args:
+            calculation: The base calculation to use for estimation
+            luminosity: The integrated luminosity, in pb^-1
+        """
+        # Call superclass initializer
+        super(MonteCarlo, self).__init__(calculation)
+
+        # Store the luminosity
+        self._luminosity = luminosity
+
+    def components(self, process, region):
+        return [
+            (self._luminosity / 1e3, False, process, region)
+        ]
