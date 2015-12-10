@@ -416,7 +416,7 @@ class Plot(object):
     PLOT_Y_AXIS_TITLE_OFSET_WITH_RATIO = 0.95
     PLOT_Y_AXIS_LABEL_SIZE_WITH_RATIO = 0.05
     PLOT_RATIO_Y_AXIS_TITLE_SIZE = 0.12
-    PLOT_RATIO_Y_AXIS_TITLE_OFFSET = 0.48
+    PLOT_RATIO_Y_AXIS_TITLE_OFFSET = 0.30
     PLOT_RATIO_Y_AXIS_LABEL_SIZE = 0.12
     PLOT_RATIO_Y_AXIS_NDIVISIONS = 504
     PLOT_RATIO_Y_AXIS_MINIMUM = 0.6
@@ -431,7 +431,7 @@ class Plot(object):
     PLOT_RATIO_ERROR_BAND_LINE_COLOR = 0
     # Stamp settings
     PLOT_ATLAS_STAMP_TITLE_SIZE = 0.04
-    PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO = 0.055
+    PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO = 0.050
     PLOT_ATLAS_STAMP_TEXT_COLOR = 1
     PLOT_ATLAS_STAMP_TEXT_FONT = 42
     PLOT_ATLAS_STAMP_LEFT = 0.18
@@ -663,7 +663,8 @@ class Plot(object):
             self._drawables.append(o)
 
             # Set the title appropriately
-            o.SetTitle(drawable.GetTitle())
+            if not is_line(o):
+                o.SetTitle(drawable.GetTitle())
 
             # Style the drawable before it is drawn
             if style is not None:
@@ -920,7 +921,8 @@ class Plot(object):
     def draw_ratios(self,
                     drawables_styles_options,
                     draw_unity = True,
-                    y_range = None):
+                    y_range = None,
+                    y_title = None):
         """Draws a drawable to the ratio pad.
 
         Args:
@@ -946,18 +948,25 @@ class Plot(object):
             self._ratio_drawables.append(o)
 
             # Set the title appropriately
-            o.SetTitle(drawable.GetTitle())
+            if not is_line(o):
+                o.SetTitle(drawable.GetTitle())
 
             # Style the drawable before it is drawn
             if style is not None:
-                style_histogram(o, *style)
+                if is_line(drawable) or is_function(drawable):
+                    style_line(o, *style)
+                else:
+                    style_histogram(o, *style)
 
-            if y_range is not None:
-                o.SetMinimum(y_range[0])
-                o.SetMaximum(y_range[1])
+            if not is_line(o):
+                if y_range is not None:
+                    o.SetMinimum(y_range[0])
+                    o.SetMaximum(y_range[1])
 
             # Include axes if we need
             if first:
+                if is_line(o):
+                    raise ValueError('TLine may not be first drawable')
                 x_axis, y_axis = o.GetXaxis(), o.GetYaxis()
                 if is_graph(o):
                     option += 'a'
@@ -981,6 +990,10 @@ class Plot(object):
         y_axis.SetTitleOffset(self.PLOT_RATIO_Y_AXIS_TITLE_OFFSET)
         y_axis.SetLabelSize(self.PLOT_RATIO_Y_AXIS_LABEL_SIZE)
         y_axis.SetNdivisions(self.PLOT_RATIO_Y_AXIS_NDIVISIONS, False)
+        if y_title is not None:
+            y_axis.SetTitle(y_title)
+
+        self._ratio_plot.Update()
 
 
     def _draw_title(self):
@@ -1075,7 +1088,7 @@ class Plot(object):
             stamp.DrawLatex(self.PLOT_ATLAS_STAMP_LEFT, top, text)
             top -= (self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
                     if self._ratio_plot
-                    else self.PLOT_ATLAS_STAMP_TITLE_SIZE)
+                    else self.PLOT_ATLAS_STAMP_TITLE_SIZE) * 1.2
 
         # If requested, draw the custom label or the 'ATLAS' label,
         # preferring the former
@@ -1089,7 +1102,7 @@ class Plot(object):
                 stamp.DrawLatex(self.PLOT_ATLAS_STAMP_LEFT, top, text)
                 top -= (self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
                         if self._ratio_plot
-                        else self.PLOT_ATLAS_STAMP_TITLE_SIZE)
+                        else self.PLOT_ATLAS_STAMP_TITLE_SIZE) * 1.2
 
         # NOTE: Code outdated. We can re-implement this when producing
         # external plots.
@@ -1165,6 +1178,11 @@ class Plot(object):
         drawables = tuple((drawable for drawable
                            in self._drawables
                            if drawable is not None))
+
+        # Remove TLine objects
+        drawables = tuple((drawable for drawable
+                           in drawables
+                           if not is_line(drawable)))
 
         # If we shouldn't add functions to the legend, remove them
         if not use_functions:
