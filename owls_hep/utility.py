@@ -1,3 +1,4 @@
+# encoding: utf-8
 """Provides utility methods for processes, regions, expressions, and
 calculations.
 """
@@ -7,14 +8,32 @@ from uuid import uuid4
 from array import array
 
 # ROOT imports
-from ROOT import TH1, TH1F, TH2F, TH3F, TF1, TGraph, Double, SetOwnership, \
-        TGraphAsymmErrors
+from ROOT import TFile, TH1, TH1F, TH2F, TH3F, TF1, TGraph, \
+        TGraphAsymmErrors, Double, SetOwnership
+        
 
 # owls-cache imports
 from owls_cache.persistent import cached as persistently_cached
 
 # owls-hep imports
 from owls_hep.expression import multiplied
+
+def load_file(file, mode = None):
+    """Open a ROOT file
+
+    Args:
+        file: The path to the ROOT file
+        mode: The mode with which to open the file
+
+    Returns:
+        A TFile object
+    """
+    if mode is None:
+        tf = TFile.Open(file)
+    else:
+        tf = TFile.Open(file, mode)
+    SetOwnership(tf, False)
+    return tf
 
 def clone(drawable):
     """Handle corner cases that obj.Clone() can't, because ROOT is so
@@ -56,6 +75,43 @@ def get_bins(binned, include_overflow = False):
     else:
         raise RuntimeError('Unsupported object: {0}'.format(type(binned)))
     return points
+
+def get_bins_errors(binned, include_overflow = False):
+    """Get a list of bin content and bin centers of a TH1 or TGraph.
+
+    Args:
+        binned: The TH1 or TGraph object
+
+    Returns:
+        A list of (x, y) values
+    """
+    points = []
+    if isinstance(binned, TGraph):
+        x = Double()
+        y = Double()
+        for i in range(binned.GetN()):
+            binned.GetPoint(i, x, y)
+            points.append((float(x), float(y), binned.GetErrorYhigh(i)))
+    elif isinstance(binned, TH1):
+        offset = 1 if include_overflow else 0
+        points = [(binned.GetBinCenter(i+1),
+                   binned.GetBinContent(i+1),
+                   binned.GetBinError(i+1))
+                   for i in range(0-offset, binned.GetNbinsX()+offset)]
+    else:
+        raise RuntimeError('Unsupported object: {0}'.format(type(binned)))
+    return points
+
+def print_bins(binned, include_overflow = True):
+    """Print bin content and errors of a TH1 or TGraph.
+
+    Args:
+        binned: The TH1 or TGraph object
+    """
+    points = get_bins_errors(binned, include_overflow)
+    strs = ['({0:.2f}, {1:.2f}±{2:.2f})'.format(x, y, e)
+            for x, y, e in points]
+    print('[' + ' '.join(strs) + ']')
 
 def make_selection(process, region):
     """Make a selection string out of the selection and weight of a region
@@ -115,20 +171,22 @@ def _rootify_binning(*args):
 def create_histogram(dimensionality, name, binnings):
     # Create the bare histogram
     if dimensionality == 1:
-        return TH1F(name, name, *_rootify_binning(*binnings[0]))
+        h = TH1F(name, name, *_rootify_binning(*binnings[0]))
     elif dimensionality == 2:
         flat_binnings = \
                 _rootify_binning(*binnings[0]) + \
                 _rootify_binning(*binnings[1])
-        return TH2F(name, name, *flat_binnings)
+        h = TH2F(name, name, *flat_binnings)
     elif dimensionality == 3:
         flat_binnings = \
                 _rootify_binning(*binnings[0]) + \
                 _rootify_binning(*binnings[1]) + \
                 _rootify_binning(*binnings[2])
-        return TH3F(name, name, *flat_binnings)
+        h = TH3F(name, name, *flat_binnings)
     else:
         raise ValueError('ROOT can only histograms 1 - 3 dimensions')
+    h.Sumw2()
+    return h
 
 @persistently_cached('owls_hep.histogramming._histogram')
 def histogram(process, region, expressions, binnings):
