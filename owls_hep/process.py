@@ -65,7 +65,7 @@ class Process(object):
                  line_color = 1,
                  fill_color = 0,
                  marker_style = None,
-                 metadata = None):
+                 metadata = {}):
         """Initializes a new instance of the Process class.
 
         Args:

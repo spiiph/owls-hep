@@ -249,13 +249,14 @@ def uncertainty_band(process, region, calculation, uncertainty, estimation):
         shape_up = shape_down = None
         shape_overall_up = shape_overall_down = None
 
+        # TODO: What's the idea here? This doesn't work as it is.
         # For computing the uncertainty of weighted MC samples, we need the
         # unweighted histogram
-        unweighted = estimation(calculation)(
-            process,
-            region.weighted(False),
-            weighted_combination = False
-        )
+        #unweighted = estimation(calculation)(
+            #process,
+            #region.weighted(False),
+            #weighted_combination = False
+        #)
 
     # Create the error band.  We pass it the nominal histogram just to get
     # the binning correct.  The graph will also extract values and errors
@@ -305,30 +306,38 @@ def uncertainty_band(process, region, calculation, uncertainty, estimation):
         if shape_overall_down is not None:
             down_variations.append(1.0 - shape_overall_down)
 
+        # TODO: What's the point of using the unweighted distribution? It
+        # makes no sense to me.
         # Add the statistical variation if uncertainty is None.  Note that we
         # compute this for the statistics of the unweighted Monte Carlo and not
         # the weighted bin count.
+        #if uncertainty is None:
+            ## Get the unweighted content
+            #unweighted_content = unweighted.GetBinContent(bin)
+
+            ## Calculate error if possible
+            #if content > 0.0 and unweighted_content > 0.0:
+                ## The extra factor of 1/content is just because we normalize
+                ## everything to content for combining together.  It has nothing
+                ## to do with the derivation of the uncertainty, and it is
+                ## multipled out below.
+                #statistical_variation = (
+                    #content / sqrt(unweighted_content)
+                #) / content
+                #up_variations.append(statistical_variation)
+                #down_variations.append(statistical_variation)
+
+        # Statistical error; use the error from the distribution directly
         if uncertainty is None:
-            # Get the unweighted content
-            unweighted_content = unweighted.GetBinContent(bin)
-
-            # Calculate error if possible
-            if content > 0.0 and unweighted_content > 0.0:
-                # The extra factor of 1/content is just because we normalize
-                # everything to content for combining together.  It has nothing
-                # to do with the derivation of the uncertainty, and it is
-                # multipled out below.
-                statistical_variation = (
-                    content / sqrt(unweighted_content)
-                ) / content
-                up_variations.append(statistical_variation)
-                down_variations.append(statistical_variation)
-
-        # Set the point and error.  Note that, since we sum things in
-        # quadrature, it really doesn't matter how we compute the differences
-        # above.
-        band.SetPointEYhigh(point, sum_quadrature(up_variations) * content)
-        band.SetPointEYlow(point, sum_quadrature(down_variations) * content)
+            error = nominal.GetBinError(bin)
+            band.SetPointEYhigh(point, error)
+            band.SetPointEYlow(point, error)
+        else:
+            # Set the point and error.  Note that, since we sum things in
+            # quadrature, it really doesn't matter how we compute the
+            # differences above.
+            band.SetPointEYhigh(point, sum_quadrature(up_variations) * content)
+            band.SetPointEYlow(point, sum_quadrature(down_variations) * content)
 
     # All done
     return band
