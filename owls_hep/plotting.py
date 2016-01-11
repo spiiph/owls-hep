@@ -241,6 +241,8 @@ def maximum_value(drawables):
                 # Could not convert argument 2, probably due to no points in
                 # the graph. (GetN() == 0) Set a maximum of 1.0.
                 maximum = 1.0
+        elif is_function(drawable):
+            maximum = drawable.GetMaximum()
         elif is_line(drawable):
             maximum = max(drawable.GetY1(), drawable.GetY2())
         elif is_function(drawable):
@@ -679,7 +681,7 @@ class Plot(object):
             # drawable, not just the one with the axes.
             if is_scatter(o):
                 o.SetMinimum(0)
-            if is_histo(o) or is_graph(o) or is_stack(o):
+            if is_histo(o) or is_graph(o) or is_stack(o) or is_function(o):
                 o.SetMaximum(self._get_maximum_value())
                 # With TGraph, this is sometimes necessary. Perhaps with TH1
                 # too. I'm not sure what happens if we set log scale, but
