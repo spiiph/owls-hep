@@ -385,7 +385,7 @@ class Plot(object):
     PLOT_LEGEND_BOTTOM = 0.7
     PLOT_LEGEND_BOTTOM_WITH_RATIO = 0.63
     PLOT_LEGEND_TOP = 0.88
-    PLOT_LEGEND_TOP_WITH_RATIO = 0.88
+    PLOT_LEGEND_TOP_WITH_RATIO = 0.86
     PLOT_LEGEND_TEXT_SIZE = 0.025
     PLOT_LEGEND_TEXT_SIZE_WITH_RATIO = 0.03
     PLOT_LEGEND_ROW_SIZE = 0.04
@@ -1017,9 +1017,9 @@ class Plot(object):
     def draw_atlas_label(self,
                          luminosity = None,
                          sqrt_s = None,
-                         ks_test = None,
                          custom_label = None,
-                         atlas_label = None):
+                         atlas_label = None,
+                         combine_lumi = True):
         """Draws an ATLAS stamp on the plot, with an optional categorization
         label.
 
@@ -1060,7 +1060,6 @@ class Plot(object):
             top = (self.PLOT_ATLAS_STAMP_LUMINOSITY_TOP_WITH_RATIO
                    if self._ratio_plot
                    else self.PLOT_ATLAS_STAMP_LUMINOSITY_TOP)
-
             stamp.SetTextSize((self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
                                if self._ratio_plot
                                else self.PLOT_ATLAS_STAMP_TITLE_SIZE))
@@ -1072,21 +1071,22 @@ class Plot(object):
                         format(luminosity / 1000.0)
             else:
                 text = '#int L dt = {0:.1f} pb^{{-1}}'.format(luminosity)
+
+            if combine_lumi and sqrt_s is not None:
+                text += ', #sqrt{{s}} = {0:.1f} TeV'.format(sqrt_s / 1e6)
+
             stamp.DrawLatex(self.PLOT_ATLAS_STAMP_LEFT, top, text)
             top -= (self.PLOT_ATLAS_STAMP_LUMINOSITY_SIZE_WITH_RATIO
                     if self._ratio_plot
                     else self.PLOT_ATLAS_STAMP_LUMINOSITY_SIZE)
 
-        if sqrt_s is not None:
+        if sqrt_s is not None and not combine_lumi:
             stamp.SetTextSize((self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
                                if self._ratio_plot
                                else self.PLOT_ATLAS_STAMP_TITLE_SIZE))
-
             # Draw the center of mass energy and the result of the KS-test, if
             # requested
             text = '#sqrt{{s}} = {0:.1f} TeV'.format(sqrt_s / 1000000.0)
-            if ks_test is not None:
-                text += ', KS = {0:.2f}'.format(ks_test)
             stamp.DrawLatex(self.PLOT_ATLAS_STAMP_LEFT, top, text)
             top -= (self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
                     if self._ratio_plot
