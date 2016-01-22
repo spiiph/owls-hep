@@ -83,7 +83,7 @@ def get_bins_errors(binned, include_overflow = False):
         binned: The TH1 or TGraph object
 
     Returns:
-        A list of (x, y) values
+        A list of (x, y, y_err) values
     """
     points = []
     if isinstance(binned, TGraph):
@@ -125,17 +125,14 @@ def make_selection(process, region):
         A selection string
     """
     # Get the combined selection and weight from the region
-    region_selection = region.selection_weight()
+    selection = region.selection_weight()
 
-    # Get patches
-    patches = process.patches()
+    # Apply process patches
+    selection = multiplied(selection, process.patches())
 
-    # Construct the final selection from the region selection and weight and
-    # the processes patches.
-    if not patches:
-        selection = region_selection
-    else:
-        selection = multiplied(region_selection, patches)
+    # Apply region patches
+    selection = multiplied(selection, region.patches(process.sample_type()))
+
     return selection
 
 

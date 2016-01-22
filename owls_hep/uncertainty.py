@@ -78,8 +78,8 @@ def to_overall(shape, nominal):
         nominal: The nominal histogram - should have the same bining as shape
 
     Returns:
-        The ratio of shape.Integral()/nominal.Integral(), or 0.0 if nominal has
-        0 integral.
+        The ratio of shape.Integral()/nominal.Integral(), or 0.0 if nominal
+        has 0 integral.
     """
     # Compute integrals
     shape_integral = shape.Integral(1, shape.GetNbinsX())
@@ -193,8 +193,10 @@ def uncertainty_band(process, region, calculation, uncertainty, estimation):
     have the shape component converted to an overall component (considered in
     addition to any existing overall component).
 
+    NOTE: CURRENTLY ROOT'S STATISTICAL ERRORS ARE USED AND THIS METHOD IS
+    DISABLED
     NOTE: The statistical error calculated is the statistical error on the
-    estimate given the poisson statistics of the unweighted samples.  This is
+    estimate given the poisson statistics of the unweighted samples. This is
     calculated per-bin as:
 
         uncertainty = sqrt(unweighted) * weighted / unweighted
@@ -205,9 +207,9 @@ def uncertainty_band(process, region, calculation, uncertainty, estimation):
     uncertainty applied by ROOT.
 
     NOTE: The y-component of the uncertainty band will NOT be set to bin
-    content because this leads to errors in usage when combining the bands and
-    is only really necessary when computing the final combined band, so instead
-    simply pass a base for the error band when calling
+    content because this leads to errors in usage when combining the bands
+    and is only really necessary when computing the final combined band, so
+    instead simply pass a base for the error band when calling
     combined_uncertainty_band.
 
     Args:

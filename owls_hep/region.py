@@ -115,6 +115,7 @@ class Region(object):
                  selection,
                  weight,
                  label,
+                 patches = {},
                  metadata = {},
                  weighted = True):
         """Initialized a new instance of the Region class.
@@ -126,6 +127,9 @@ class Region(object):
                 empty string for no weighting
             label: The ROOT TLatex label string to use when rendering the
                 region
+            patches: Patches to apply to the selection based on sample type.
+                Should match the sample types of the processes, for example
+                'mc' and 'data'.
             metadata: A (pickleable) object containing optional metadata
             weighted: If False, the `selection_weight` method will return an
                 empty string for weight - can be varied later using the
@@ -135,6 +139,7 @@ class Region(object):
         self._selection = selection
         self._weight = weight
         self._label = label
+        self._patches = patches
         self._metadata = metadata
         self._weighted = weighted
 
@@ -155,7 +160,8 @@ class Region(object):
             self._selection,
             self._weight,
             self._weighted,
-            self._variations
+            self._variations,
+            tuple(sorted(self._patches.iteritems())),
         )
 
     def __str__(self):
@@ -172,6 +178,14 @@ class Region(object):
         """Returns metadata for this region, if any.
         """
         return self._metadata
+
+    def patches(self, sample_type):
+        """Returns patch string for the sample type.
+        """
+        try:
+            return self._patches[sample_type]
+        except:
+            return None
 
     # NOTE: I'm not sure I like this late execution of the variations. I'd
     # much rather apply the variations directly. But perhaps there's some

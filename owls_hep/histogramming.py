@@ -34,7 +34,7 @@ def _histogram_mocker(process, region, expressions, binnings):
     dimensionality = len(binnings)
     return create_histogram(dimensionality, name, binnings)
 
-# Parallelization mapper batching in combinations of region,process, and
+# Parallelization mapper batching in combinations of region, process, and
 # expressions
 def _histogram_mapper(process, region, expressions, binnings):
     return (process,region,expressions)
@@ -122,9 +122,11 @@ class Histogram(Calculation):
             A ROOT histogram representing the resultant distribution.
         """
         # Print some debug info
-        #print('Process: {0} ({1})'.format(process._label, process._patches))
-        #print('Selection: {0}'.format(make_selection(process, region)))
-        #print('Expressions: {0}'.format(':'.join(self._expressions)))
+        if 'print_me' in process.metadata():
+            print('=== Process: {0} ({1}) ==='.format(process._label, process._patches))
+            print('Selection: {0}'.format(make_selection(process, region)))
+            #print('Expressions: {0}'.format(':'.join(self._expressions)))
+            print()
         # Compute the histogram
         result = _histogram(process, region, self._expressions, self._binnings)
 

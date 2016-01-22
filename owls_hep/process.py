@@ -62,6 +62,7 @@ class Process(object):
                  files,
                  tree,
                  label,
+                 sample_type = 'undef',
                  line_color = 1,
                  fill_color = 0,
                  marker_style = None,
@@ -87,6 +88,7 @@ class Process(object):
         self._files_size_time = None
         self._tree = tree
         self._label = label
+        self._sample_type = sample_type
         self._line_color = line_color
         self._fill_color = fill_color
         self._marker_style = marker_style
@@ -120,12 +122,21 @@ class Process(object):
         # Use only files, tree, and patches in the state since those are all
         # that really matter for data loading
         self._get_files_size_time()
-        return (self._files, self._files_size_time, self._tree, self.patches())
+        return (self._files,
+                self._files_size_time,
+                self._tree,
+                self._sample_type,
+                self.patches())
 
     def files(self):
         """Returns the files for the process.
         """
         return self._files
+
+    def sample_type(self):
+        """Returns the sample type for the process.
+        """
+        return self._sample_type
 
     def metadata(self):
         """Returns the metadata for the process, if any.
