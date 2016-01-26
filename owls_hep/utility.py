@@ -218,7 +218,7 @@ def histogram(process, region, expressions, binnings):
     return h
 
 
-def add_histograms(histograms):
+def add_histograms(histograms, title = None):
     """Adds histograms and returns the result with bin errors calculated.
 
     Args:
@@ -231,9 +231,12 @@ def add_histograms(histograms):
     # Grab the first histogram, making sure bin errors are calculated before
     # adding the remaining histograms
     result = histograms[0].Clone(uuid4().hex)
-    SetOwnership(result, False)
+    #SetOwnership(result, False)
     if result.GetSumw2N() == 0:
         result.Sumw2()
+
+    if title is not None:
+        result.SetTitle(title)
 
     # Add the other histograms to the result
     map(result.Add, histograms[1:])
