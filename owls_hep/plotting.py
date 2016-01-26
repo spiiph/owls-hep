@@ -410,6 +410,7 @@ class Plot(object):
     PLOT_X_AXIS_TITLE_OFFSET = 0.95
     PLOT_X_AXIS_TITLE_OFFSET_WITH_RATIO = 0.96
     PLOT_X_AXIS_LABEL_SIZE_WITH_RATIO = 0.12
+    PLOT_Y_AXIS_LABEL_OFFSET = 0.01
     PLOT_Y_AXIS_TITLE_SIZE = PLOT_X_AXIS_TITLE_SIZE
     PLOT_Y_AXIS_TITLE_SIZE_WITH_RATIO = 0.06
     # Use this for surface plots etc.
@@ -417,9 +418,10 @@ class Plot(object):
     PLOT_Y_AXIS_TITLE_OFFSET = 1.0
     PLOT_Y_AXIS_TITLE_OFSET_WITH_RATIO = 0.95
     PLOT_Y_AXIS_LABEL_SIZE_WITH_RATIO = 0.05
-    PLOT_RATIO_Y_AXIS_TITLE_SIZE = 0.12
-    PLOT_RATIO_Y_AXIS_TITLE_OFFSET = 0.30
+    PLOT_RATIO_Y_AXIS_TITLE_SIZE = 0.085
+    PLOT_RATIO_Y_AXIS_TITLE_OFFSET = 0.50
     PLOT_RATIO_Y_AXIS_LABEL_SIZE = 0.12
+    PLOT_RATIO_Y_AXIS_LABEL_OFFSET = PLOT_Y_AXIS_LABEL_OFFSET
     PLOT_RATIO_Y_AXIS_NDIVISIONS = 504
     PLOT_RATIO_Y_AXIS_MINIMUM = 0.6
     PLOT_RATIO_Y_AXIS_MAXIMUM = 1.4
@@ -441,8 +443,9 @@ class Plot(object):
     PLOT_ATLAS_STAMP_TOP_WITH_RATIO = 0.82
     # Stamp specializations
     PLOT_ATLAS_STAMP_ATLAS_TEXT_FONT = 72
-    PLOT_ATLAS_STAMP_LUMINOSITY_TOP = 0.83
-    PLOT_ATLAS_STAMP_LUMINOSITY_TOP_WITH_RATIO = 0.81
+    PLOT_ATLAS_STAMP_ATLAS_LABEL_LEFT = 0.28
+    PLOT_ATLAS_STAMP_LUMINOSITY_OFFSET = 0.03
+    PLOT_ATLAS_STAMP_LUMINOSITY_OFFSET_WITH_RATIO = 0.05
     PLOT_ATLAS_STAMP_LUMINOSITY_SIZE = 0.055
     PLOT_ATLAS_STAMP_LUMINOSITY_SIZE_WITH_RATIO = 0.085
 
@@ -777,7 +780,8 @@ class Plot(object):
             self._y_title = title_histogram.GetYaxis().GetTitle()
 
         if self._x_range is not None:
-            x_axis.SetRangeUser(*self._x_range)
+            #x_axis.SetRangeUser(*self._x_range)
+            x_axis.SetLimits(*self._x_range)
 
         # Style x-axis, or hide it if this plot has a ratio plot
         if self._ratio_plot:
@@ -791,6 +795,7 @@ class Plot(object):
         # Style y-axis
         if self._ratio_plot:
             y_axis.SetLabelSize(self.PLOT_Y_AXIS_LABEL_SIZE_WITH_RATIO)
+        y_axis.SetLabelOffset(self.PLOT_Y_AXIS_LABEL_OFFSET)
         y_axis.SetTitle(self._y_title)
         y_axis.SetTitleSize(
             (self.PLOT_Y_AXIS_TITLE_SIZE_WITH_RATIO
@@ -864,12 +869,16 @@ class Plot(object):
         x_axis.SetTitle(self._x_title)
         if self._x_range:
             x_axis.SetLimits(*self._x_range)
+            #x_axis.SetRangeUser(*self._x_range)
         else:
             x_axis.SetLimits(self._axes_object.GetXaxis().GetXmin(),
                              self._axes_object.GetXaxis().GetXmax())
+            #x_axis.SetRangeUser(self._axes_object.GetXaxis().GetXmin(),
+                                #self._axes_object.GetXaxis().GetXmax())
         y_axis.SetTitleSize(self.PLOT_RATIO_Y_AXIS_TITLE_SIZE)
         y_axis.SetTitleOffset(self.PLOT_RATIO_Y_AXIS_TITLE_OFFSET)
         y_axis.SetLabelSize(self.PLOT_RATIO_Y_AXIS_LABEL_SIZE)
+        y_axis.SetLabelOffset(self.PLOT_RATIO_Y_AXIS_LABEL_OFFSET)
         y_axis.SetRangeUser(self.PLOT_RATIO_Y_AXIS_MINIMUM,
                             self.PLOT_RATIO_Y_AXIS_MAXIMUM)
         y_axis.SetNdivisions(self.PLOT_RATIO_Y_AXIS_NDIVISIONS, False)
@@ -985,12 +994,16 @@ class Plot(object):
         x_axis.SetTitle(self._x_title)
         if self._x_range:
             x_axis.SetLimits(*self._x_range)
+            #x_axis.SetRangeUser(*self._x_range)
         else:
             x_axis.SetLimits(self._axes_object.GetXaxis().GetXmin(),
                              self._axes_object.GetXaxis().GetXmax())
+            #x_axis.SetRangeUser(self._axes_object.GetXaxis().GetXmin(),
+                                #self._axes_object.GetXaxis().GetXmax())
         y_axis.SetTitleSize(self.PLOT_RATIO_Y_AXIS_TITLE_SIZE)
         y_axis.SetTitleOffset(self.PLOT_RATIO_Y_AXIS_TITLE_OFFSET)
         y_axis.SetLabelSize(self.PLOT_RATIO_Y_AXIS_LABEL_SIZE)
+        y_axis.SetLabelOffset(self.PLOT_RATIO_Y_AXIS_LABEL_OFFSET)
         y_axis.SetNdivisions(self.PLOT_RATIO_Y_AXIS_NDIVISIONS, False)
         if y_title is not None:
             y_axis.SetTitle(y_title)
@@ -1048,6 +1061,9 @@ class Plot(object):
 
         # Style it
         stamp.SetTextColor(self.PLOT_ATLAS_STAMP_TEXT_COLOR)
+        stamp.SetTextSize((self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
+                           if self._ratio_plot
+                           else self.PLOT_ATLAS_STAMP_TITLE_SIZE))
         stamp.SetTextFont(self.PLOT_ATLAS_STAMP_TEXT_FONT)
         stamp.SetNDC()
 
@@ -1055,38 +1071,46 @@ class Plot(object):
                if self._ratio_plot
                else self.PLOT_ATLAS_STAMP_TOP)
 
+        # Print an ATLAS label on top
+        if atlas_label is not None:
+            # Draw the label
+            stamp.SetTextFont(self.PLOT_ATLAS_STAMP_ATLAS_TEXT_FONT)
+            stamp.DrawLatex(self.PLOT_ATLAS_STAMP_LEFT, top, 'ATLAS')
+            stamp.SetTextFont(self.PLOT_ATLAS_STAMP_TEXT_FONT)
+            stamp.DrawLatex(self.PLOT_ATLAS_STAMP_ATLAS_LABEL_LEFT,
+                            top,
+                            atlas_label)
+            top -= (self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
+                    if self._ratio_plot
+                    else self.PLOT_ATLAS_STAMP_TITLE_SIZE)
+
+
         # Draw the luminosity
         if luminosity is not None:
-            top = (self.PLOT_ATLAS_STAMP_LUMINOSITY_TOP_WITH_RATIO
-                   if self._ratio_plot
-                   else self.PLOT_ATLAS_STAMP_LUMINOSITY_TOP)
-            stamp.SetTextSize((self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
-                               if self._ratio_plot
-                               else self.PLOT_ATLAS_STAMP_TITLE_SIZE))
             if luminosity >= 1000.0:
-                text = '#int L dt = {0:.1f} fb^{{-1}}'.\
+                text = '#int Ldt = {0:.1f} fb^{{-1}}'.\
                         format(luminosity / 1000.0)
             elif luminosity > 100.0:
-                text = '#int L dt = {0:.2f} fb^{{-1}}'.\
+                text = '#int Ldt = {0:.2f} fb^{{-1}}'.\
                         format(luminosity / 1000.0)
             else:
-                text = '#int L dt = {0:.1f} pb^{{-1}}'.format(luminosity)
+                text = '#int Ldt = {0:.1f} pb^{{-1}}'.format(luminosity)
 
             if combine_lumi and sqrt_s is not None:
-                text += ', #sqrt{{s}} = {0:.1f} TeV'.format(sqrt_s / 1e6)
+                text += ', #sqrt{{s}} = {0:.0f} TeV'.format(sqrt_s / 1e6)
 
+            top -= (self.PLOT_ATLAS_STAMP_LUMINOSITY_OFFSET_WITH_RATIO
+                    if self._ratio_plot
+                    else self.PLOT_ATLAS_STAMP_LUMINOSITY_OFFSET)
             stamp.DrawLatex(self.PLOT_ATLAS_STAMP_LEFT, top, text)
             top -= (self.PLOT_ATLAS_STAMP_LUMINOSITY_SIZE_WITH_RATIO
                     if self._ratio_plot
                     else self.PLOT_ATLAS_STAMP_LUMINOSITY_SIZE)
 
         if sqrt_s is not None and not combine_lumi:
-            stamp.SetTextSize((self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
-                               if self._ratio_plot
-                               else self.PLOT_ATLAS_STAMP_TITLE_SIZE))
             # Draw the center of mass energy and the result of the KS-test, if
             # requested
-            text = '#sqrt{{s}} = {0:.1f} TeV'.format(sqrt_s / 1000000.0)
+            text = '#sqrt{{s}} = {0:.0f} TeV'.format(sqrt_s / 1000000.0)
             stamp.DrawLatex(self.PLOT_ATLAS_STAMP_LEFT, top, text)
             top -= (self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
                     if self._ratio_plot
@@ -1095,31 +1119,12 @@ class Plot(object):
         # If requested, draw the custom label or the 'ATLAS' label,
         # preferring the former
         if custom_label is not None:
-            stamp.SetTextSize((self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
-                               if self._ratio_plot
-                               else self.PLOT_ATLAS_STAMP_TITLE_SIZE))
-
             # Draw each line of text, decreasing top for each step
             for text in custom_label:
                 stamp.DrawLatex(self.PLOT_ATLAS_STAMP_LEFT, top, text)
                 top -= (self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
                         if self._ratio_plot
                         else self.PLOT_ATLAS_STAMP_TITLE_SIZE) * 1.2
-
-        # NOTE: Code outdated. We can re-implement this when producing
-        # external plots.
-        #elif atlas_label is not None:
-            ## Draw the label
-            #stamp.SetTextSize((self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
-                               #if self._ratio_plot
-                               #else self.PLOT_ATLAS_STAMP_TITLE_SIZE))
-            # Draw 'ATLAS'
-            #stamp.SetTextFont(self.PLOT_ATLAS_STAMP_ATLAS_TEXT_FONT)
-            #stamp.DrawLatex(
-                #self.PLOT_ATLAS_STAMP_LEFT,
-                #top,
-                #'ATLAS'
-            #)
 
     def draw_pave(self, texts, position):
         """Draw a text box at the position and fill it with text.
@@ -1253,7 +1258,7 @@ class Plot(object):
             # marker style (data) to be drawn as line with point, and with
             # empty fill (signal) to be drawn as line
             if drawable.GetMarkerStyle() != 0:
-                self._legend.AddEntry(drawable, title, 'lp')
+                self._legend.AddEntry(drawable, title, 'ep')
             elif drawable.GetFillColor() == 0:
                 self._legend.AddEntry(drawable, title, 'l')
             else:
