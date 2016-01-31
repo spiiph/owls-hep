@@ -1,7 +1,8 @@
 """Provides minor abstractions on top of ROOT to faciliate somewhat more
-elegant plotting.  As with anything that interfaces with ROOT, there are bound
-to be... idiosyncrasies, though this module does its best to hide them.  It
-provides several functions for manipulating histograms or collections thereof:
+elegant plotting.  As with anything that interfaces with ROOT, there are
+bound to be... idiosyncrasies, though this module does its best to hide them.
+It provides several functions for manipulating histograms or collections
+thereof:
 
     - drawable_iterable
     - combined_histogram
@@ -371,7 +372,7 @@ class Plot(object):
     PLOT_WIDTH = 1280 # px
     PLOT_HEIGHT = 1024 # px
     #PLOT_MARGINS = (0.125, 0.05, 0.1, 0.1) # Left, Right, Bottom, Top
-    PLOT_MARGINS = (0.125, 0.1, 0.1, 0.1) # Left, Right, Bottom, Top
+    PLOT_MARGINS = (0.125, 0.05, 0.1, 0.07) # Left, Right, Bottom, Top
     PLOT_MARGINS_WITH_RATIO = (0.125, 0.05, 0.025, 0.1)
     PLOT_RATIO_MARGINS = (0.125, 0.05, 0.325, 0.05)
     PLOT_TITLE_X = 0.5
@@ -384,7 +385,7 @@ class Plot(object):
     PLOT_LEGEND_RIGHT = 0.95
     PLOT_LEGEND_BOTTOM = 0.7
     PLOT_LEGEND_BOTTOM_WITH_RATIO = 0.63
-    PLOT_LEGEND_TOP = 0.88
+    PLOT_LEGEND_TOP = 0.90
     PLOT_LEGEND_TOP_WITH_RATIO = 0.86
     PLOT_LEGEND_TEXT_SIZE = 0.025
     PLOT_LEGEND_TEXT_SIZE_WITH_RATIO = 0.03
@@ -403,23 +404,19 @@ class Plot(object):
     PLOT_STAT_TEXT_SIZE = 0.03
     PLOT_STAT_TEXT_SIZE_WITH_RATIO = 0.04
     PLOT_RATIO_FRACTION = 0.3 # fraction of canvas height
-    PLOT_X_AXIS_TITLE_SIZE = 0.045
-    PLOT_X_AXIS_TITLE_SIZE_WITH_RATIO = 0.13
-    # Use this for surface plots etc.
-    #PLOT_X_AXIS_TITLE_OFFSET = 1.3
+    PLOT_X_AXIS_TITLE_SIZE = 0.042
+    PLOT_X_AXIS_TITLE_SIZE_WITH_RATIO = 0.14
     PLOT_X_AXIS_TITLE_OFFSET = 0.95
     PLOT_X_AXIS_TITLE_OFFSET_WITH_RATIO = 0.96
     PLOT_X_AXIS_LABEL_SIZE_WITH_RATIO = 0.12
     PLOT_Y_AXIS_LABEL_OFFSET = 0.01
-    PLOT_Y_AXIS_TITLE_SIZE = PLOT_X_AXIS_TITLE_SIZE
+    PLOT_Y_AXIS_TITLE_SIZE = 0.042
     PLOT_Y_AXIS_TITLE_SIZE_WITH_RATIO = 0.06
-    # Use this for surface plots etc.
-    #PLOT_Y_AXIS_TITLE_OFFSET = 1.5
     PLOT_Y_AXIS_TITLE_OFFSET = 1.0
-    PLOT_Y_AXIS_TITLE_OFSET_WITH_RATIO = 0.95
+    PLOT_Y_AXIS_TITLE_OFFSET_WITH_RATIO = 0.95
     PLOT_Y_AXIS_LABEL_SIZE_WITH_RATIO = 0.05
-    PLOT_RATIO_Y_AXIS_TITLE_SIZE = 0.085
-    PLOT_RATIO_Y_AXIS_TITLE_OFFSET = 0.50
+    PLOT_RATIO_Y_AXIS_TITLE_SIZE = 0.12
+    PLOT_RATIO_Y_AXIS_TITLE_OFFSET = 0.40
     PLOT_RATIO_Y_AXIS_LABEL_SIZE = 0.12
     PLOT_RATIO_Y_AXIS_LABEL_OFFSET = PLOT_Y_AXIS_LABEL_OFFSET
     PLOT_RATIO_Y_AXIS_NDIVISIONS = 504
@@ -434,19 +431,19 @@ class Plot(object):
     PLOT_RATIO_ERROR_BAND_LINE_WIDTH = 0
     PLOT_RATIO_ERROR_BAND_LINE_COLOR = 0
     # Stamp settings
-    PLOT_ATLAS_STAMP_TITLE_SIZE = 0.04
-    PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO = 0.050
+    PLOT_ATLAS_STAMP_TEXT_SIZE = 0.035
+    PLOT_ATLAS_STAMP_TEXT_SIZE_WITH_RATIO = 0.05
     PLOT_ATLAS_STAMP_TEXT_COLOR = 1
     PLOT_ATLAS_STAMP_TEXT_FONT = 42
     PLOT_ATLAS_STAMP_LEFT = 0.18
-    PLOT_ATLAS_STAMP_TOP = 0.84
+    PLOT_ATLAS_STAMP_TOP = 0.875
     PLOT_ATLAS_STAMP_TOP_WITH_RATIO = 0.82
     # Stamp specializations
     PLOT_ATLAS_STAMP_ATLAS_TEXT_FONT = 72
     PLOT_ATLAS_STAMP_ATLAS_LABEL_LEFT = 0.28
-    PLOT_ATLAS_STAMP_LUMINOSITY_OFFSET = 0.03
+    PLOT_ATLAS_STAMP_LUMINOSITY_OFFSET = 0.036
     PLOT_ATLAS_STAMP_LUMINOSITY_OFFSET_WITH_RATIO = 0.05
-    PLOT_ATLAS_STAMP_LUMINOSITY_SIZE = 0.055
+    PLOT_ATLAS_STAMP_LUMINOSITY_SIZE = 0.062
     PLOT_ATLAS_STAMP_LUMINOSITY_SIZE_WITH_RATIO = 0.085
 
     def __init__(self,
@@ -803,7 +800,7 @@ class Plot(object):
              else self.PLOT_Y_AXIS_TITLE_SIZE)
         )
         y_axis.SetTitleOffset(
-            (self.PLOT_Y_AXIS_TITLE_OFSET_WITH_RATIO
+            (self.PLOT_Y_AXIS_TITLE_OFFSET_WITH_RATIO
              if self._ratio_plot
              else self.PLOT_Y_AXIS_TITLE_OFFSET)
         )
@@ -1061,9 +1058,9 @@ class Plot(object):
 
         # Style it
         stamp.SetTextColor(self.PLOT_ATLAS_STAMP_TEXT_COLOR)
-        stamp.SetTextSize((self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
+        stamp.SetTextSize((self.PLOT_ATLAS_STAMP_TEXT_SIZE_WITH_RATIO
                            if self._ratio_plot
-                           else self.PLOT_ATLAS_STAMP_TITLE_SIZE))
+                           else self.PLOT_ATLAS_STAMP_TEXT_SIZE))
         stamp.SetTextFont(self.PLOT_ATLAS_STAMP_TEXT_FONT)
         stamp.SetNDC()
 
@@ -1080,9 +1077,9 @@ class Plot(object):
             stamp.DrawLatex(self.PLOT_ATLAS_STAMP_ATLAS_LABEL_LEFT,
                             top,
                             atlas_label)
-            top -= (self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
+            top -= (self.PLOT_ATLAS_STAMP_TEXT_SIZE_WITH_RATIO
                     if self._ratio_plot
-                    else self.PLOT_ATLAS_STAMP_TITLE_SIZE)
+                    else self.PLOT_ATLAS_STAMP_TEXT_SIZE)
 
 
         # Draw the luminosity
@@ -1112,9 +1109,9 @@ class Plot(object):
             # requested
             text = '#sqrt{{s}} = {0:.0f} TeV'.format(sqrt_s / 1000000.0)
             stamp.DrawLatex(self.PLOT_ATLAS_STAMP_LEFT, top, text)
-            top -= (self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
+            top -= (self.PLOT_ATLAS_STAMP_TEXT_SIZE_WITH_RATIO
                     if self._ratio_plot
-                    else self.PLOT_ATLAS_STAMP_TITLE_SIZE) * 1.2
+                    else self.PLOT_ATLAS_STAMP_TEXT_SIZE) * 1.2
 
         # If requested, draw the custom label or the 'ATLAS' label,
         # preferring the former
@@ -1122,9 +1119,9 @@ class Plot(object):
             # Draw each line of text, decreasing top for each step
             for text in custom_label:
                 stamp.DrawLatex(self.PLOT_ATLAS_STAMP_LEFT, top, text)
-                top -= (self.PLOT_ATLAS_STAMP_TITLE_SIZE_WITH_RATIO
+                top -= (self.PLOT_ATLAS_STAMP_TEXT_SIZE_WITH_RATIO
                         if self._ratio_plot
-                        else self.PLOT_ATLAS_STAMP_TITLE_SIZE) * 1.2
+                        else self.PLOT_ATLAS_STAMP_TEXT_SIZE) * 1.2
 
     def draw_pave(self, texts, position):
         """Draw a text box at the position and fill it with text.
