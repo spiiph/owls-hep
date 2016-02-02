@@ -1028,8 +1028,7 @@ class Plot(object):
                          luminosity = None,
                          sqrt_s = None,
                          custom_label = None,
-                         atlas_label = None,
-                         combine_lumi = True):
+                         atlas_label = None):
         """Draws an ATLAS stamp on the plot, with an optional categorization
         label.
 
@@ -1048,9 +1047,6 @@ class Plot(object):
         # Create the latex object
         # TODO: Consider using TPaveText to overwrite drawn graphs and
         # histograms. At least for scatter plots.
-        # TODO: Need a different approach for positioning. Start at TOP,
-        # print ATLAS label (if any), print lumi and sqrt(s), print custom
-        # label. Update current text position after each print.
         # TODO: Increase readability: Create two sets of constants -
         # one for plots with ratio and one for plots without. Select the
         # correct one in draw_ratio_histogram.
@@ -1079,35 +1075,24 @@ class Plot(object):
                             atlas_label)
             top -= (self.PLOT_ATLAS_STAMP_TEXT_SIZE_WITH_RATIO
                     if self._ratio_plot
-                    else self.PLOT_ATLAS_STAMP_TEXT_SIZE)
+                    else self.PLOT_ATLAS_STAMP_TEXT_SIZE) * 1.2
 
 
-        # Draw the luminosity
-        if luminosity is not None:
+        # Draw the luminosity and sqrt(s)
+        if luminosity is not None or sqrt_s is not None:
+            text = ''
+            if sqrt_s is not None:
+                text += '#sqrt{{s}} = {0:.0f} TeV'.format(sqrt_s / 1.0e6)
+                if luminosity is not None:
+                    text += ', '
             if luminosity >= 1000.0:
-                text = '#int Ldt = {0:.1f} fb^{{-1}}'.\
-                        format(luminosity / 1000.0)
+                text += '{0:.1f} fb^{{-1}}'.format(luminosity / 1000.0)
             elif luminosity > 100.0:
-                text = '#int Ldt = {0:.2f} fb^{{-1}}'.\
-                        format(luminosity / 1000.0)
+                text += '{0:.2f} fb^{{-1}}'.format(luminosity / 1000.0)
             else:
-                text = '#int Ldt = {0:.1f} pb^{{-1}}'.format(luminosity)
+                text += '{0:.1f} pb^{{-1}}'.format(luminosity)
 
-            if combine_lumi and sqrt_s is not None:
-                text += ', #sqrt{{s}} = {0:.0f} TeV'.format(sqrt_s / 1e6)
 
-            top -= (self.PLOT_ATLAS_STAMP_LUMINOSITY_OFFSET_WITH_RATIO
-                    if self._ratio_plot
-                    else self.PLOT_ATLAS_STAMP_LUMINOSITY_OFFSET)
-            stamp.DrawLatex(self.PLOT_ATLAS_STAMP_LEFT, top, text)
-            top -= (self.PLOT_ATLAS_STAMP_LUMINOSITY_SIZE_WITH_RATIO
-                    if self._ratio_plot
-                    else self.PLOT_ATLAS_STAMP_LUMINOSITY_SIZE)
-
-        if sqrt_s is not None and not combine_lumi:
-            # Draw the center of mass energy and the result of the KS-test, if
-            # requested
-            text = '#sqrt{{s}} = {0:.0f} TeV'.format(sqrt_s / 1000000.0)
             stamp.DrawLatex(self.PLOT_ATLAS_STAMP_LEFT, top, text)
             top -= (self.PLOT_ATLAS_STAMP_TEXT_SIZE_WITH_RATIO
                     if self._ratio_plot
