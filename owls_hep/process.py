@@ -13,7 +13,7 @@ from os import stat
 from six import string_types
 
 # ROOT imports
-from ROOT import TChain, TColor
+from ROOT import TChain, TColor, SetOwnership
 
 # owls-hep imports
 from owls_hep.expression import multiplied
@@ -63,6 +63,7 @@ class Process(object):
                  tree,
                  label,
                  sample_type = 'undef',
+                 friends = (),
                  line_color = 1,
                  fill_color = 0,
                  marker_style = None,
@@ -89,6 +90,7 @@ class Process(object):
         self._tree = tree
         self._label = label
         self._sample_type = sample_type
+        self._friends = friends
         self._line_color = line_color
         self._fill_color = fill_color
         self._marker_style = marker_style
@@ -119,13 +121,14 @@ class Process(object):
     def state(self):
         """Returns a the state for the process.
         """
-        # Use only files, tree, and patches in the state since those are all
-        # that really matter for data loading
+        # Use only files, tree, patches, friends, and sample_type in the
+        # state since those are all that really matter for data processing
         self._get_files_size_time()
         return (self._files,
                 self._files_size_time,
                 self._tree,
                 self._sample_type,
+                self._friends,
                 self.patches())
 
     def files(self):
@@ -164,7 +167,17 @@ class Process(object):
                 raise RuntimeError('file does not exist {0}'.format(f))
             chain.Add(f)
 
+        for friend in self._friends:
+            chain.AddFriend(self._load_friend(*friend))
+
         # All done
+        return chain
+
+    def _load_friend(self, file, tree, index):
+        chain = TChain(tree)
+        chain.Add(file)
+        if index is not None:
+            chain.BuildIndex(index)
         return chain
 
     def retreed(self, tree):
