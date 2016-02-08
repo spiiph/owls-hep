@@ -99,7 +99,7 @@ def enable_fit(enable = True):
         gStyle.SetOptFit(0)
 
 def style_histogram(drawable, line_color, fill_color, marker_style,
-                    line_size = 2):
+                    fill_style = 1001, marker_size = 2, line_size = 2):
     """Applies a style to a drawable object.
 
     Args:
@@ -118,13 +118,13 @@ def style_histogram(drawable, line_color, fill_color, marker_style,
     drawable.SetLineWidth(line_size)
 
     # Set fill style and color
-    drawable.SetFillStyle(1001)
+    drawable.SetFillStyle(fill_style)
     drawable.SetFillColor(fill_color)
 
     # Set marker style
     if marker_style is not None:
         drawable.SetMarkerStyle(marker_style)
-        drawable.SetMarkerSize(2)
+        drawable.SetMarkerSize(marker_size)
         drawable.SetMarkerColor(line_color)
     else:
         # HACK: Set marker style to an invalid value if not specified,
@@ -671,9 +671,15 @@ class Plot(object):
             # Style the drawable before it is drawn
             if style is not None:
                 if is_line(drawable) or is_function(drawable):
-                    style_line(o, *style)
+                    if isinstance(style, dict):
+                        style_line(o, **style)
+                    else:
+                        style_line(o, *style)
                 else:
-                    style_histogram(o, *style)
+                    if isinstance(style, dict):
+                        style_histogram(o, **style)
+                    else:
+                        style_histogram(o, *style)
 
             # Set the maximum value of the drawable if supported
             # HACK: I wish this could go into _handle_axes, but apparently it
@@ -1145,7 +1151,7 @@ class Plot(object):
         # Draw the pave
         self._pave.Draw()
 
-    def draw_legend(self, use_functions = False):
+    def draw_legend(self, use_functions = False, legend_entries = None):
         """Draws a legend onto the plot with the specified histograms.
 
         It is recommended that you construct the Plot with plot_header = True
@@ -1164,19 +1170,25 @@ class Plot(object):
             raise RuntimeError('plot must be drawn before the legend')
 
         # Remove None-valued drawables
-        drawables = tuple((drawable for drawable
-                           in self._drawables
-                           if drawable is not None))
+        drawables = tuple((d for d in self._drawables if d is not None))
 
         # Remove TLine objects
-        drawables = tuple((drawable for drawable
-                           in drawables
-                           if not is_line(drawable)))
+        drawables = tuple((d for d in drawables if not is_line(d)))
 
         # If we shouldn't add functions to the legend, remove them
         if not use_functions:
-            drawables = tuple((drawable for drawable
-                               in drawables if not isinstance(drawable, TF1)))
+            drawables = tuple((d for d in drawables if not isinstance(d, TF1)))
+
+        # Use only certain entries
+        if legend_entries is not None:
+            def get_drawable_by_title(title):
+                for d in drawables:
+                    if d.GetTitle() == title:
+                        return d
+                return None
+            drawables = tuple((get_drawable_by_title(e.GetTitle())
+                               for e in legend_entries))
+            drawables = tuple((d for d in drawables if d is not None))
 
         # Switch to the context of the main plot
         self._plot.cd()
