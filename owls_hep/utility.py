@@ -268,7 +268,9 @@ def efficiency(total, passed):
         # = 0. Due to negative weights and low stats some bins can have
         # passed > total; set the content for such bins to passed = total.
         _make_consistent(passed, total)
-        rep = TGraphAsymmErrors(passed, total)
+        # Divide(pass,total,"cl=0.683 b(1,1) mode")
+        rep = TGraphAsymmErrors(passed, total, "cl=0.683 b(1,1) mode")
+        #rep = TGraphAsymmErrors(passed, total)
 
         #passed_bins = get_bins(passed, True)
         #total_bins = get_bins(total, True)
