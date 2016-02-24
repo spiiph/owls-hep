@@ -125,13 +125,10 @@ def make_selection(process, region):
         A selection string
     """
     # Get the combined selection and weight from the region
-    selection = region.selection_weight()
+    selection = region.selection_weight(process.sample_type())
 
     # Apply process patches
     selection = multiplied(selection, process.patches())
-
-    # Apply region patches
-    selection = multiplied(selection, region.patches(process.sample_type()))
 
     return selection
 

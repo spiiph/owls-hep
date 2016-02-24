@@ -115,9 +115,8 @@ class Region(object):
                  selection,
                  weight,
                  label,
-                 patches = {},
-                 metadata = {},
-                 weighted = True):
+                 sample_weights = {},
+                 metadata = {}):
         """Initialized a new instance of the Region class.
 
         Args:
@@ -127,21 +126,18 @@ class Region(object):
                 empty string for no weighting
             label: The ROOT TLatex label string to use when rendering the
                 region
-            patches: Patches to apply to the selection based on sample type.
-                Should match the sample types of the processes, for example
-                'mc' and 'data'.
+            sample_weights: Weights to apply to the selection based on sample
+                type. Should match the sample types of the processes, for
+                example 'mc' and 'data'.
             metadata: A (pickleable) object containing optional metadata
-            weighted: If False, the `selection_weight` method will return an
-                empty string for weight - can be varied later using the
-                `weighted` method
         """
         # Store parameters
         self._selection = selection
         self._weight = weight
         self._label = label
-        self._patches = patches
+        self._sample_weights = sample_weights
         self._metadata = metadata
-        self._weighted = weighted
+        self._weighted = True
 
         # Create initial variations container
         self._variations = ()
@@ -161,7 +157,7 @@ class Region(object):
             self._weight,
             self._weighted,
             self._variations,
-            tuple(sorted(self._patches.iteritems())),
+            tuple(sorted(self._sample_weights.iteritems())),
         )
 
     def __str__(self):
@@ -179,17 +175,6 @@ class Region(object):
         """
         return self._metadata
 
-    def patches(self, sample_type):
-        """Returns patch string for the sample type.
-        """
-        try:
-            return self._patches[sample_type]
-        except:
-            return None
-
-    # NOTE: I'm not sure I like this late execution of the variations. I'd
-    # much rather apply the variations directly. But perhaps there's some
-    # deeper meaning here.
     def varied(self, variations):
         """Creates a copy of the region with the specified variation applied.
 
@@ -210,48 +195,47 @@ class Region(object):
 
         return result
 
-    def weighted(self, weighting_enabled):
-        """Creates a copy of the region with weighting turned on or off.
+    # NOTE: This function is obsolete. I don't know when it would never be
+    # useful, since weights are such an integral part of the simulation.
+    #def weighted(self, weighting_enabled):
+        #"""Creates a copy of the region with weighting turned on or off.
 
-        If there is no change to the weighting, self will be returned.
+        #If there is no change to the weighting, self will be returned.
 
-        Args:
-            weighting_enabled: Whether or not to enable weighting
+        #Args:
+            #weighting_enabled: Whether or not to enable weighting
 
-        Returns:
-            A duplicate region, but with weighting set to weighting_enabled.
-        """
-        # If there's no change, return self
-        if weighting_enabled == self._weighted:
-            return self
+        #Returns:
+            #A duplicate region, but with weighting set to weighting_enabled.
+        #"""
+        ## If there's no change, return self
+        #if weighting_enabled == self._weighted:
+            #return self
 
-        # Create a copy
-        result = copy(self)
+        ## Create a copy
+        #result = copy(self)
 
-        # Change weighting status
-        result._weighted = weighting_enabled
+        ## Change weighting status
+        #result._weighted = weighting_enabled
 
-        # All done
-        return result
+        ## All done
+        #return result
 
-    def selection_weight(self):
+    def selection_weight(self, sample_type):
         """Returns a string of "selection * weight" with all variations
         applied.
         """
         # Grab resultant weight/selection
-        selection, weight = self._selection, self._weight
+        selection = self._selection
+        try:
+            weight = multiplied(self._weight,
+                                self._sample_weights[sample_type])
+        except:
+            weight = self._weight
 
         # Apply any variations
         for v in self._variations:
             selection, weight = v(selection, weight)
 
-        # If this region isn't weighted, return only the selection
-        if selection:
-            if self._weighted and weight:
-                return multiplied(selection, weight)
-            else:
-                return selection
-        elif self._weighted and weight:
-            return weight
-        else:
-            return ""
+        # Return the product of the selection and weight expressions
+        return multiplied(selection, weight)
