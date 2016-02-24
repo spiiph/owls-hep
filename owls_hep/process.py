@@ -131,6 +131,11 @@ class Process(object):
                 self._friends,
                 self.patches())
 
+    def label(self):
+        """Returns the label of the process.
+        """
+        return self._label
+
     def files(self):
         """Returns the files for the process.
         """
@@ -170,14 +175,17 @@ class Process(object):
         for friend in self._friends:
             chain.AddFriend(self._load_friend(*friend))
 
-        # All done
         return chain
 
     def _load_friend(self, file, tree, index):
+        if not isfile(file):
+            raise RuntimeError('file does not exist {0}'.format(file))
+
         chain = TChain(tree)
         chain.Add(file)
         if index is not None:
             chain.BuildIndex(index)
+
         return chain
 
     def retreed(self, tree):

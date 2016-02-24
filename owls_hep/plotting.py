@@ -453,7 +453,8 @@ class Plot(object):
                  plot_header = True,
                  ratio = False,
                  x_range = None,
-                 y_max = None):
+                 y_max = None,
+                 y_log_scale = False):
         """Initializes a new instance of the Plot class.
 
         Args:
@@ -463,6 +464,7 @@ class Plot(object):
             ratio: Whether or not to include a ratio plot
             x_range: A tuple of (x_min, x_max)
             y_max: The maximum Y axis value
+            y_log_scale: Use log scale for Y axis
         """
         # Store the title
         self._title = title
@@ -506,6 +508,9 @@ class Plot(object):
         self._x_range = x_range
         if y_max is not None:
             self._set_maximum_value(y_max)
+
+        # Store log scale
+        self._y_log_scale = y_log_scale
 
         # Switch back to the context of the canvas
         self._canvas.cd()
@@ -592,10 +597,6 @@ class Plot(object):
 
         # Set the value
         self._maximum_value = value
-
-    def set_log_scale(self, log_scale = True):
-        """Set log scale on the Y axis for this plot."""
-        self._plot.SetLogy(int(log_scale))
 
     def draw(self, *drawables_styles_options):
         """Plots a collection of plottables to the main plot pad.  All TH1
@@ -686,13 +687,13 @@ class Plot(object):
             # can't because ROOT sucks and this has to be set on EVERY
             # drawable, not just the one with the axes.
             if is_scatter(o):
-                o.SetMinimum(0)
+                o.SetMinimum(1 if self._y_log_scale else 0)
             if is_histo(o) or is_graph(o) or is_stack(o) or is_function(o):
                 o.SetMaximum(self._get_maximum_value())
                 # With TGraph, this is sometimes necessary. Perhaps with TH1
                 # too. I'm not sure what happens if we set log scale, but
                 # we'll cross that bridge then.
-                o.SetMinimum(0)
+                o.SetMinimum(1 if self._y_log_scale else 0)
 
             # Include axes if we need to. Store the x-axis range.
             if first:
@@ -741,6 +742,9 @@ class Plot(object):
             # If there is an error band, draw it
             if error_band is not None:
                 self._draw_error_band(error_band)
+
+        if self._y_log_scale:
+            self._plot.SetLogy(1)
 
         # TODO: Verify this. It breaks 2D plotting.
         # HACK: Need to force a redraw of plot axes due to issue with ROOT:
