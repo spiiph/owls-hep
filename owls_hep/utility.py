@@ -133,13 +133,16 @@ def make_selection(process, region):
     return selection
 
 
-def integral(obj, include_overflow = True):
+def integral(obj, include_overflow = True, bin_range = None):
     """A helper function to compute the integral for THN histograms of
     dimensionality D <= 3.
     """
     offset = 1 if include_overflow else 0
     if obj.GetDimension() == 1:
-        return obj.Integral(1-offset, obj.GetNbinsX()+offset)
+        if bin_range is not None:
+            return obj.Integral(bin_range[0], bin_range[1])
+        else:
+            return obj.Integral(1-offset, obj.GetNbinsX()+offset)
     elif obj.GetDimension() == 2:
         return obj.Integral(1-offset, obj.GetNbinsX()+offset,
                              1-offset, obj.GetNbinsY()+offset)
@@ -148,8 +151,21 @@ def integral(obj, include_overflow = True):
                              1-offset, obj.GetNbinsY()+offset,
                              1-offset, obj.GetNbinsZ()+offset)
     else:
-        raise ValueError('don''t know how to compute the integral for '
+        raise ValueError('don\'t know how to compute the integral for '
                          'more than 3 dimensions')
+
+def integral_and_error(obj, bin_range):
+    """A helper function to compute the integral and corresponding error for
+    TH1 histograms.
+    """
+    if obj.GetDimension() == 1:
+        error = Double()
+        integral = obj.IntegralAndError(bin_range[0], bin_range[1], error)
+        return integral, error
+    else:
+        raise ValueError('can\'t compute integral and error for objects '
+                         'of dimension greater than 1')
+
 
 # NOTE: This function takes binnings of the form (nbins, low, up) or (low1,
 # low2, low3, ..., lowN, upN). We could reinstate the type as the first
