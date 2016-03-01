@@ -188,9 +188,18 @@ class Region(object):
         result = copy(self)
 
         # Add the variation
+        # NOTE: It's useful to check if the variation actually is a subclass
+        # of Variation. Mistakes here are particularly hard to decode.
         if isinstance(variations, tuple):
+            for v in variations:
+                if not isinstance(variations, Variation):
+                    raise TypeError('{} is not a subclass of Variation'. \
+                            format(v))
             result._variations += variations
         else:
+            if not isinstance(variations, Variation):
+                raise TypeError('{} is not a subclass of Variation'. \
+                        format(variations))
             result._variations += (variations,)
 
         return result
