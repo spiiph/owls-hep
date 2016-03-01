@@ -13,7 +13,7 @@ __all__ = [
     'Estimation',
 ]
 
-# TODO: This is a bit over-engineered.
+# TODO: This is a bit over-engineered. Yeah, definitely over-engineered.
 # TODO: May want to impose documented requirements on the types of calculations
 # which should be supported by estimation, specifically Count, Histogram, and
 # Uncertainty, but the underlying calculation/estimation combination may be too
@@ -91,6 +91,15 @@ class Estimation(HigherOrderCalculation):
         # Determine if we're dealing with an uncertainty or not
         is_uncertainty = isinstance(self.calculation, Uncertainty)
 
+        # Uncertainty calculations need 3-valued coefficients, to accomodate
+        # for up/down variations. Convert 1-valued coefficients to 3-tuples
+        # with the same value.
+        def to_tuple(v):
+            return (v, v, v) if isinstance(v, float) else v
+        components = [(to_tuple(c[0]), c[1], c[2], c[3])
+                      for c
+                      in components]
+
         # If we're dealing with an uncertainty calculation, then create a
         # calculation that will compute a faux-uncertainty ntuple with the
         # nominal value for components that shouldn't have the uncertainty
@@ -99,7 +108,7 @@ class Estimation(HigherOrderCalculation):
             def nominal(coefficient, process, region):
                 # self.calculation.calculation is the nominal calculation
                 n = multiply(
-                    coefficient,
+                    coefficient[0],
                     self.calculation.calculation(process, region)
                 )
                 return (None, None, n, n)
@@ -117,8 +126,8 @@ class Estimation(HigherOrderCalculation):
                 return (
                     None,
                     None,
-                    multiply(coefficient, u[2]),
-                    multiply(coefficient, u[3])
+                    multiply(coefficient[1], u[2]),
+                    multiply(coefficient[2], u[3])
                 )
 
         # Compute the first value which we'll use as the basis of the result
@@ -129,7 +138,8 @@ class Estimation(HigherOrderCalculation):
             else:
                 result = uncertainty(coefficient, process, region)
         else:
-            result = multiply(coefficient, self.calculation(process, region))
+            result = multiply(coefficient[0],
+                              self.calculation(process, region))
 
         # Compute the remaining values
         for coefficient, use_nominal, process, region in components[1:]:
@@ -149,7 +159,7 @@ class Estimation(HigherOrderCalculation):
                 result = add(
                     1.0,
                     result,
-                    coefficient,
+                    coefficient[0],
                     self.calculation(process, region)
                 )
 
