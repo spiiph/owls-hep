@@ -7,7 +7,7 @@ from __future__ import print_function
 # System imports
 from inspect import getsource
 import re
-from copy import copy
+from copy import deepcopy
 
 # owls-data imports
 from owls_hep.expression import multiplied
@@ -185,7 +185,7 @@ class Region(object):
             A duplicate region, but with the specified variation applied.
         """
         # Create the copy
-        result = copy(self)
+        result = deepcopy(self)
 
         # Add the variation
         # NOTE: It's useful to check if the variation actually is a subclass
@@ -229,6 +229,18 @@ class Region(object):
 
         ## All done
         #return result
+
+    def selection(self):
+        """Returns a string of "selection * weight" with all variations
+        applied.
+        """
+        # Grab resultant weight/selection
+        selection = self._selection
+
+        # Apply any variations
+        for v in self._variations:
+            selection, _ = v(selection, '')
+        return selection
 
     def selection_weight(self, sample_type):
         """Returns a string of "selection * weight" with all variations

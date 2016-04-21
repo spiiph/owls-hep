@@ -122,11 +122,16 @@ class Histogram(Calculation):
             A ROOT histogram representing the resultant distribution.
         """
         # Print some debug info
-        if process.metadata().get('print_me', False):
-            print('=== Process: {0} ({1}) ==='.format(process._label, process._patches))
-            print('Selection: {0}'.format(make_selection(process, region)))
-            #print('Expressions: {0}'.format(':'.join(self._expressions)))
+        print_me = process.metadata().get('print_me', [])
+        if 'selection' in print_me or 'expressions' in print_me:
+            print('=== Process: {0} ({1}) ==='.format(process._label,
+                                                      process._patches))
+            if 'selection' in print_me:
+                print('Selection: {0}'.format(make_selection(process, region)))
+            if 'expressions' in print_me:
+                print('Expressions: {0}'.format(':'.join(self._expressions)))
             print()
+
         # Compute the histogram
         result = _histogram(process, region, self._expressions, self._binnings)
 
