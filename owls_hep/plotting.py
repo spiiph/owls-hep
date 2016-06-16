@@ -318,7 +318,9 @@ def ratio_histogram(numerator, denominator, y_title = 'Data / Background'):
     # Do some styling on the result
     result.SetTitle('')
     result.SetStats(0)
-    result.SetMarkerStyle(21)
+    # TODO: This should probably be configurable
+    result.SetMarkerStyle(8)
+    # result.SetMarkerStyle(21)
 
     # Set title
     result.GetYaxis().SetTitle(y_title)
@@ -369,6 +371,8 @@ class Plot(object):
     # inconsistent and fragile, so it is best to fix these values here.  You
     # can change them dynamically with Plot.Whatever = value, but it is
     # probably best to leave them alone.
+    # TODO: 600x600 and 800x600 are the ATLAS default for square and
+    # rectangular plots respectively. Fix this when everything is calm.
     PLOT_WIDTH = 1280 # px
     PLOT_HEIGHT = 1024 # px
     #PLOT_MARGINS = (0.125, 0.05, 0.1, 0.1) # Left, Right, Bottom, Top
@@ -392,6 +396,7 @@ class Plot(object):
     PLOT_LEGEND_ROW_SIZE = 0.04
     PLOT_LEGEND_ROW_SIZE_WITH_RATIO = 0.045
     PLOT_LEGEND_N_COLUMNS = 1
+    PLOT_LEGEND_PIVOT_COLUMNS = True
     PLOT_STAT_LEFT = 0.55
     PLOT_STAT_LEFT_WITH_RATIO = 0.60
     PLOT_STAT_RIGHT = 0.85
@@ -894,7 +899,9 @@ class Plot(object):
         # NOTE: Have to specify E0 or points out of the vertical range won't
         # have their error bars drawn:
         #   https://root.cern.ch/phpBB3/viewtopic.php?f=3&t=13329
-        histogram.Draw('e0p')
+        # histogram.Draw('e0p')
+        # NOTE: Or live with it and get rid of points from zero value bins
+        histogram.Draw('ep')
 
         # Draw a line at unity if requested
         if draw_unity:
@@ -934,7 +941,8 @@ class Plot(object):
         # histogram so that its point lie on top of the unity line or error
         # band, but use 'same' so that the axes/ticks don't cover the red line
         if draw_unity or error_band:
-            histogram.Draw('e0psame')
+            # histogram.Draw('e0psame')
+            histogram.Draw('epsame')
 
     def draw_ratios(self,
                     drawables_styles_options,
@@ -1085,7 +1093,7 @@ class Plot(object):
                             atlas_label)
             top -= (self.PLOT_ATLAS_STAMP_TEXT_SIZE_WITH_RATIO
                     if self._ratio_plot
-                    else self.PLOT_ATLAS_STAMP_TEXT_SIZE) * 1.2
+                    else self.PLOT_ATLAS_STAMP_TEXT_SIZE) * 1.3
 
 
         # Draw the luminosity and sqrt(s)
@@ -1106,7 +1114,7 @@ class Plot(object):
             stamp.DrawLatex(self.PLOT_ATLAS_STAMP_LEFT, top, text)
             top -= (self.PLOT_ATLAS_STAMP_TEXT_SIZE_WITH_RATIO
                     if self._ratio_plot
-                    else self.PLOT_ATLAS_STAMP_TEXT_SIZE) * 1.2
+                    else self.PLOT_ATLAS_STAMP_TEXT_SIZE) * 1.3
 
         # If requested, draw the custom label or the 'ATLAS' label,
         # preferring the former
@@ -1116,7 +1124,7 @@ class Plot(object):
                 stamp.DrawLatex(self.PLOT_ATLAS_STAMP_LEFT, top, text)
                 top -= (self.PLOT_ATLAS_STAMP_TEXT_SIZE_WITH_RATIO
                         if self._ratio_plot
-                        else self.PLOT_ATLAS_STAMP_TEXT_SIZE) * 1.2
+                        else self.PLOT_ATLAS_STAMP_TEXT_SIZE) * 1.3
 
     def draw_pave(self, texts, position):
         """Draw a text box at the position and fill it with text.
@@ -1191,7 +1199,7 @@ class Plot(object):
                         return d
                 return None
             drawables = tuple((get_drawable_by_title(e.GetTitle())
-                               for e in legend_entries))
+                               for e in legend_entries if e is not None))
             drawables = tuple((d for d in drawables if d is not None))
 
         # Switch to the context of the main plot
@@ -1232,21 +1240,24 @@ class Plot(object):
         # not top-to-bottom along columns, we need to do a bit of a pivot on
         # the list so that the histograms appear in the vertical order of the
         # stack
-        n_entries = len(drawables)
-        n_col = self.PLOT_LEGEND_N_COLUMNS
-        n_row = int(ceil(float(n_entries) / n_col))
-        self._legend.SetY1(self._legend.GetY2() -
-                n_row * (self.PLOT_LEGEND_ROW_SIZE_WITH_RATIO
-                         if self._ratio_plot
-                         else self.PLOT_LEGEND_ROW_SIZE))
-        legend_order = []
-        for r in xrange(0, n_row):
-            for c in xrange(0, n_col):
-                if (r * n_col + c) == n_entries:
-                    # Don't need an outer break, this would only happen on the
-                    # last row if n_row * n_col != n_entries
-                    break
-                legend_order.append(drawables[r + c * n_row])
+        if self.PLOT_LEGEND_PIVOT_COLUMNS:
+            n_entries = len(drawables)
+            n_col = self.PLOT_LEGEND_N_COLUMNS
+            n_row = int(ceil(float(n_entries) / n_col))
+            self._legend.SetY1(self._legend.GetY2() -
+                    n_row * (self.PLOT_LEGEND_ROW_SIZE_WITH_RATIO
+                             if self._ratio_plot
+                             else self.PLOT_LEGEND_ROW_SIZE))
+            legend_order = []
+            for r in xrange(0, n_row):
+                for c in xrange(0, n_col):
+                    if (r * n_col + c) == n_entries:
+                        # Don't need an outer break, this would only happen on the
+                        # last row if n_row * n_col != n_entries
+                        break
+                    legend_order.append(drawables[r + c * n_row])
+        else:
+            legend_order = drawables
 
         # Add the drawables
         for drawable in legend_order:

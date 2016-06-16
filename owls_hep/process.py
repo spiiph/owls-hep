@@ -254,7 +254,8 @@ class Process(object):
         # Set marker style
         if self._marker_style is not None:
             histogram.SetMarkerStyle(self._marker_style)
-            histogram.SetMarkerSize(1)
+            # TODO: This should be configurable
+            histogram.SetMarkerSize(2)
             histogram.SetMarkerColor(histogram.GetLineColor())
         else:
             # HACK: Set marker style to an invalid value if not specified,

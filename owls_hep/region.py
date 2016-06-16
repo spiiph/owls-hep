@@ -168,7 +168,10 @@ class Region(object):
     def label(self):
         """Returns the label for the region, if any.
         """
-        return self._label
+        if isinstance(self._label, list) or isinstance(self._label, tuple):
+            return self._label
+        else:
+            return [self._label]
 
     def metadata(self):
         """Returns metadata for this region, if any.
