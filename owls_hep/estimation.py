@@ -11,6 +11,7 @@ from owls_hep.algebra import add, multiply
 # Set up default exports
 __all__ = [
     'Estimation',
+    'Plain'
 ]
 
 # TODO: This is a bit over-engineered. Yeah, definitely over-engineered.

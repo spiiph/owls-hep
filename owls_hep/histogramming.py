@@ -16,7 +16,8 @@ from owls_parallel import parallelized
 
 # owls-hep imports
 from owls_hep.calculation import Calculation
-from owls_hep.utility import make_selection, create_histogram, histogram
+from owls_hep.utility import make_selection, create_histogram, histogram, \
+        integral
 
 
 # Set up default exports
@@ -123,17 +124,19 @@ class Histogram(Calculation):
         """
         # Print some debug info
         print_me = process.metadata().get('print_me', [])
-        if 'selection' in print_me or 'expressions' in print_me:
+        if [v for v in print_me
+            if v in ['selection', 'expressions', 'counts']]:
             print('=== Process: {0} ({1}) ==='.format(process._label,
                                                       process._patches))
-            if 'selection' in print_me:
-                print('Selection: {0}'.format(make_selection(process, region)))
-            if 'expressions' in print_me:
-                print('Expressions: {0}'.format(':'.join(self._expressions)))
-            print()
-
         # Compute the histogram
         result = _histogram(process, region, self._expressions, self._binnings)
+
+        if 'selection' in print_me:
+            print('Selection: {0}\n'.format(make_selection(process, region)))
+        if 'expressions' in print_me:
+            print('Expressions: {0}\n'.format(':'.join(self._expressions)))
+        if 'counts' in print_me:
+            print('Counts: {0:.1f}\n'.format(integral(result)))
 
         # Set labels
         result.SetTitle(self._title)
