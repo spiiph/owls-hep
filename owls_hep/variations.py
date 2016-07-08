@@ -148,9 +148,47 @@ class Filtered(Variation):
         else:
             return 'Filtered({0})'.format(self._selection)
 
+class ReplaceSelection(Variation):
+    """A region variation that substitutes a sub-expression in a region's
+    selection with a new expression.
+    """
+
+    def __init__(self, expr, variation):
+        """Initializes a new instance of the ReplaceSelection class
+
+        Args:
+                expr:           Expression in the form of a regular expression
+                variation:      Variation to replace expr
+        """
+        self._expr = expr
+        self._variation = variation
+
+    def state(self):
+        """Returns a representation of the variation's internal state.
+        """
+        return (self._expr, self._variation)
+
+    def __call__(self, selection, weight):
+        """Substitutes a sub-expression in a region's selection.
+
+        Args:
+            selection: The existing selection expression
+            weight: The existing weight expression
+
+        Returns:
+            A tuple of the form (varied_selection, weight).
+        """
+        return (variable_substituted(selection, self._expr, self._variation),
+                weight)
+
+    def __str__(self):
+        """Return a string representation of the variation.
+        """
+        return 'ReplaceSelection({0})'.format(self._variation)
+
 class ReplaceWeight(Variation):
-    """A region variation that replaces a weight (single event weight or
-    combination thereof) with a new weight (e.g. a systematic variation).
+    """A region variation that substitutes a sub-expression in a region's
+    weight with a new expression.
     """
 
     def __init__(self, weight, variation):
@@ -170,14 +208,14 @@ class ReplaceWeight(Variation):
         return (self._weight, self._variation)
 
     def __call__(self, selection, weight):
-        """Add's an expression to a region's weight.
+        """Substitutes a sub-expression in a region's weight.
 
         Args:
             selection: The existing selection expression
             weight: The existing weight expression
 
         Returns:
-            A tuple of the form (varied_selection, varied_weight).
+            A tuple of the form (selection, varied_weight).
         """
         return (selection,
                 variable_substituted(weight, self._weight, self._variation))
