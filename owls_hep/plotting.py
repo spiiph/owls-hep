@@ -85,6 +85,13 @@ def is_line(l):
 def is_function(f):
     return isinstance(f, TF1)
 
+def valid_drawable(d):
+    if d is None:
+        return False
+    elif isinstance(d, tuple):
+        if d[0] is None:
+            return False
+    return True
 
 def enable_stat(enable = True):
     if enable:
@@ -641,8 +648,11 @@ class Plot(object):
         self._drawn = True
 
         # Remove None-valued drawables
-        drawables_styles_options = tuple(((d,s,o) for d,s,o \
-                in drawables_styles_options if d is not None))
+        drawables_styles_options = tuple((
+            (d,s,o)
+            for d,s,o
+            in drawables_styles_options
+            if valid_drawable(d)))
 
         # Extract drawables
         drawables, _, _ = zip(*drawables_styles_options)
