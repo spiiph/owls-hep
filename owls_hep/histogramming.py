@@ -126,17 +126,21 @@ class Histogram(Calculation):
         print_me = process.metadata().get('print_me', [])
         if [v for v in print_me
             if v in ['selection', 'expressions', 'counts']]:
-            print('=== Process: {0} ({1}) ==='.format(process._label,
-                                                      process._patches))
+            print('=== Process: {} ==='.format(process))
+
         # Compute the histogram
         result = _histogram(process, region, self._expressions, self._binnings)
 
         if 'selection' in print_me:
-            print('Selection: {0}\n'.format(make_selection(process, region)))
+            print('Selection: {}'.format(make_selection(process, region)))
         if 'expressions' in print_me:
-            print('Expressions: {0}\n'.format(':'.join(self._expressions)))
+            print('Expressions: {}'.format(':'.join(self._expressions)))
         if 'counts' in print_me:
-            print('Counts: {0:.1f}\n'.format(integral(result)))
+            print('Counts: {:.1f}'.format(integral(result)))
+
+        if [v for v in print_me
+            if v in ['selection', 'expressions', 'counts']]:
+            print()
 
         # Set labels
         result.SetTitle(self._title)

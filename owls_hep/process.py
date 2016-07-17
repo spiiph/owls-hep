@@ -52,6 +52,14 @@ class Patch(object):
         """
         return self._selection
 
+    def __repr__(self):
+        """Returns the representation of the patch.
+
+        Returns:
+            The representation
+        """
+        return 'Patch({})'.format(self._selection)
+
 
 class Process(object):
     """Represents a physical process whose events may be encoded in one or more
@@ -110,6 +118,10 @@ class Process(object):
         """
         # Hash the state
         return hash(self.state())
+
+    def __repr__(self):
+        return '{} ({})'.format(self._label,
+                                ', '.join((repr(p) for p in self._patches)))
 
     def _get_files_size_time(self):
         """Populate the file sizes and modification times tuple.
