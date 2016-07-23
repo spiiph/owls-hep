@@ -6,6 +6,7 @@ calculations.
 # System imports
 from uuid import uuid4
 from array import array
+from math import sqrt
 
 # ROOT imports
 from ROOT import TFile, TH1, TH1F, TH2F, TH3F, TF1, TGraph, \
@@ -166,6 +167,20 @@ def integral_and_error(obj, bin_range):
         raise ValueError('can\'t compute integral and error for objects '
                          'of dimension greater than 1')
 
+def add_overflow_to_last_bin(histogram):
+    """A helper function to add the contents of the overflow bin to the last
+    visible bin in TH1 histograms.
+    """
+    if isinstance(histogram, TH1):
+        n = histogram.GetNbinsX()
+        new_content = histogram.GetBinContent(n) + histogram.GetBinContent(n+1)
+        new_error = sqrt(histogram.GetBinError(n)**2 +
+                         histogram.GetBinError(n+1)**2)
+        histogram.SetBinContent(n, new_content)
+        histogram.SetBinError(n, new_error)
+    else:
+        raise ValueError('don\'t know how to add overflow bin to last bin for '
+                         '{}'.format(type(histogram)))
 
 # NOTE: This function takes binnings of the form (nbins, low, up) or (low1,
 # low2, low3, ..., lowN, upN). We could reinstate the type as the first

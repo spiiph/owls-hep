@@ -17,7 +17,7 @@ from owls_parallel import parallelized
 # owls-hep imports
 from owls_hep.calculation import Calculation
 from owls_hep.utility import make_selection, create_histogram, histogram, \
-        integral
+        integral, add_overflow_to_last_bin
 
 
 # Set up default exports
@@ -63,7 +63,8 @@ class Histogram(Calculation):
     subclasses must return a ROOT THN subclass for their result.
     """
 
-    def __init__(self, expressions, binnings, title, x_label, y_label):
+    def __init__(self, expressions, binnings, title, x_label, y_label,
+                 include_overflow = False):
         """Initializes a new instance of the Histogram calculation.
 
         Args:
@@ -77,6 +78,7 @@ class Histogram(Calculation):
             title: The ROOT TLatex label to use for the histogram title
             x_label: The ROOT TLatex label to use for the x-axis
             y_label: The ROOT TLatex label to use for the y-axis
+            include_overflow: Add contents of overflow bin to last bin
         """
         # Store parameters
         if isinstance(expressions, string_types):
@@ -90,6 +92,7 @@ class Histogram(Calculation):
         self._title = title
         self._x_label = x_label
         self._y_label = y_label
+        self._include_overflow = include_overflow
 
         # Validate that expression and binning counts jive
         if len(self._expressions) != len(self._binnings):
@@ -130,6 +133,10 @@ class Histogram(Calculation):
 
         # Compute the histogram
         result = _histogram(process, region, self._expressions, self._binnings)
+
+        # Add content of overflow bin to last bin
+        if self._include_overflow:
+            add_overflow_to_last_bin(result)
 
         if 'selection' in print_me:
             print('Selection: {}'.format(make_selection(process, region)))
