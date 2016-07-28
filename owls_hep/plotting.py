@@ -1113,12 +1113,13 @@ class Plot(object):
                 text += '#sqrt{{s}} = {0:.0f} TeV'.format(sqrt_s / 1.0e6)
                 if luminosity is not None:
                     text += ', '
-            if luminosity >= 1000.0:
-                text += '{0:.1f} fb^{{-1}}'.format(luminosity / 1000.0)
-            elif luminosity > 100.0:
-                text += '{0:.2f} fb^{{-1}}'.format(luminosity / 1000.0)
-            else:
-                text += '{0:.1f} pb^{{-1}}'.format(luminosity)
+            if luminosity is not None:
+                if luminosity >= 1000.0:
+                    text += '{0:.1f} fb^{{-1}}'.format(luminosity / 1000.0)
+                elif luminosity > 100.0:
+                    text += '{0:.2f} fb^{{-1}}'.format(luminosity / 1000.0)
+                else:
+                    text += '{0:.1f} pb^{{-1}}'.format(luminosity)
 
 
             stamp.DrawLatex(self.PLOT_ATLAS_STAMP_LEFT, top, text)
