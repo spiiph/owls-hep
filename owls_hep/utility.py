@@ -178,6 +178,8 @@ def add_overflow_to_last_bin(histogram):
                          histogram.GetBinError(n+1)**2)
         histogram.SetBinContent(n, new_content)
         histogram.SetBinError(n, new_error)
+        histogram.SetBinContent(n+1, 0.0)
+        histogram.SetBinError(n+1, 0.0)
     else:
         raise ValueError('don\'t know how to add overflow bin to last bin for '
                          '{}'.format(type(histogram)))
@@ -278,7 +280,9 @@ def _make_consistent(passed, total):
     # Include overflow bins
     for i in range(passed.GetNbinsX()+2):
         if total.GetBinContent(i) <= 0:
-            total.SetBinContent(i, 1.0)
+            # total.SetBinContent(i, 1.0)
+            # NOTE: Let's try this
+            total.SetBinContent(i, 0.0)
             passed.SetBinContent(i, 0.0)
         elif passed.GetBinContent(i) < 0:
             passed.SetBinContent(i, 0)
