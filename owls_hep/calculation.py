@@ -28,6 +28,17 @@ class Calculation(object):
         """
         raise NotImplementedError('abstract method')
 
+    def finalize_result(self, result):
+        """Default method to polish the final result specific to the
+        calculation. Useful to implement special treatment of the overflow
+        bin for Histogram, for instance.
+
+        Args:
+            result: The result in the form of whatever the calculation has
+            produced.
+        """
+        pass
+
 
 class HigherOrderCalculation(Calculation):
     """Abstract base class for higher order calculations.

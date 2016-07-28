@@ -134,10 +134,6 @@ class Histogram(Calculation):
         # Compute the histogram
         result = _histogram(process, region, self._expressions, self._binnings)
 
-        # Add content of overflow bin to last bin
-        if self._include_overflow:
-            add_overflow_to_last_bin(result)
-
         if 'selection' in print_me:
             print('Selection: {}'.format(make_selection(process, region)))
         if 'expressions' in print_me:
@@ -159,3 +155,19 @@ class Histogram(Calculation):
 
         # All done
         return result
+
+    # TODO: Disabled for now; it's probably better to handle this in the
+    # end user clients (e.g. plot.py etc)
+    # def finalize_result(self, result):
+        # """Method to polish the final histogram. Used to add overflow to last
+        # bin, if desired.
+
+        # Args:
+            # result: The the final histogram
+        # """
+
+        # Add content of overflow bin to last bin
+        # if self._include_overflow:
+            # add_overflow_to_last_bin(result)
+
+

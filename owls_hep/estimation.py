@@ -6,6 +6,7 @@
 from owls_hep.calculation import HigherOrderCalculation
 from owls_hep.uncertainty import Uncertainty, to_shape
 from owls_hep.algebra import add, multiply
+from owls_hep.utility import integral
 
 
 # Set up default exports
@@ -164,7 +165,12 @@ class Estimation(HigherOrderCalculation):
                     self.calculation(process, region)
                 )
 
-        # All done
+        # Allow the HigherOrderCalculation to polish the result
+        # (e.g. special treatment of overflow bin for Histogram)
+        self.calculation.finalize_result(result)
+
+        if 'estimation' in process.metadata().get('print_me', []):
+            print('Final estimate: {:.2f}'.format(integral(result, False)))
         return result
 
 class Plain(Estimation):
