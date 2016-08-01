@@ -1131,7 +1131,7 @@ class Plot(object):
         # preferring the former
         if custom_label is not None:
             # Draw each line of text, decreasing top for each step
-            for text in custom_label:
+            for text in [t for t in custom_label if t is not None]:
                 stamp.DrawLatex(self.PLOT_ATLAS_STAMP_LEFT, top, text)
                 top -= (self.PLOT_ATLAS_STAMP_TEXT_SIZE_WITH_RATIO
                         if self._ratio_plot
