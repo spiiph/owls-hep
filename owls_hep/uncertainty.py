@@ -185,6 +185,8 @@ def combined_count_uncertainty(count_uncertainties):
     )
 
 
+# TODO: I want to change the overall uncertainties to shape uncertainties. It
+# seems more fair.
 def uncertainty_band(process, region, calculation, uncertainty, estimation):
     """Calculates an uncertainty band (TGraphAsymmErrors) for a specific
     uncertainty.

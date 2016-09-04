@@ -63,6 +63,8 @@ class Region(object):
         """Returns the state of the region.
         """
         # Only hash those parameters which affect evaluation
+        # TODO: Switch to using self._selection_weight() and add sample_type
+        # as an input parameter (if possible)
         return (
             self._selection,
             self._weight,
@@ -89,7 +91,7 @@ class Region(object):
         """
         return self._metadata
 
-    def varied(self, variations):
+    def varied(self, variations, label = None):
         """Creates a copy of the region with the specified variation applied.
 
         Args:
@@ -115,6 +117,9 @@ class Region(object):
                 raise TypeError('{} is not a subclass of Variation'. \
                         format(variations))
             result._variations += (variations,)
+
+        if label is not None:
+            result._label = label
 
         return result
 
