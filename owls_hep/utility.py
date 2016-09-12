@@ -187,10 +187,13 @@ def add_overflow_to_last_bin(histogram):
 # NOTE: This function takes binnings of the form (nbins, low, up) or (low1,
 # low2, low3, ..., lowN, upN). We could reinstate the type as the first
 # element of the tuple, but to what end?
+# NOTE: To allow for 1- and 2-bin histograms. I need them now, smartass.
 def _rootify_binning(*args):
-    if len(args) < 3:
-        raise ValueError('Need at least three values to create a proper binning')
-    if len(args) == 3:
+    if args[0] == 'custom':
+        return (len(args)-2, array('f', args[1:]))
+    elif args[0] == 'linear':
+        return tuple(args[1:])
+    elif len(args) == 3:
         return tuple(args)
     else:
         return (len(args)-1, array('f', args))
