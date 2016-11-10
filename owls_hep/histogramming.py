@@ -114,6 +114,11 @@ class Histogram(Calculation):
         """
         return self._y_label
 
+    def dimension(self):
+        """Returns the dimension of the histogram
+        """
+        return len(self._expressions)
+
     def __call__(self, process, region):
         """Histograms weighted events passing a region's selection into a
         distribution.

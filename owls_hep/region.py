@@ -108,7 +108,7 @@ class Region(object):
         # of Variation. Mistakes here are particularly hard to decode.
         if isinstance(variations, tuple):
             for v in variations:
-                if not isinstance(variations, Variation):
+                if not isinstance(v, Variation):
                     raise TypeError('{} is not a subclass of Variation'. \
                             format(v))
             result._variations += variations
